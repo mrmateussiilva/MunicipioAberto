@@ -20,6 +20,12 @@ class Contrato(models.Model):
     data_publicacao = models.DateField()
     fonte_dados = models.URLField(max_length=500)
     numero_processo = models.CharField(max_length=100)
+    
+    # Geolocalização
+    logradouro = models.CharField(max_length=255, null=True, blank=True)
+    bairro = models.CharField(max_length=100, null=True, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     class Meta:
         ordering = ["-data_assinatura"]
