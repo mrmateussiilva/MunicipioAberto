@@ -1,0 +1,85 @@
+[
+  {
+    "model": "municipios.municipio",
+    "pk": 1,
+    "fields": {
+      "nome": "Cidade Exemplo",
+      "estado": "SP",
+      "codigo_ibge": "3550308",
+      "populacao": 123456,
+      "data_criacao": "1990-01-01"
+    }
+  },
+  {
+    "model": "empresas.empresa",
+    "pk": 1,
+    "fields": {
+      "nome": "Alpha Servicos Urbanos",
+      "cnpj": "12.345.678/0001-90",
+      "data_abertura": "2023-12-01",
+      "municipio": 1
+    }
+  },
+  {
+    "model": "empresas.empresa",
+    "pk": 2,
+    "fields": {
+      "nome": "Beta Engenharia Municipal",
+      "cnpj": "98.765.432/0001-10",
+      "data_abertura": "2018-06-15",
+      "municipio": 1
+    }
+  },
+  {
+    "model": "socios.socio",
+    "pk": 1,
+    "fields": {
+      "nome": "Maria da Silva",
+      "cpf": "123.456.789-00",
+      "empresa": 1,
+      "percentual_participacao": "60.00"
+    }
+  },
+  {
+    "model": "contratos.contrato",
+    "pk": 1,
+    "fields": {
+      "municipio": 1,
+      "empresa": 1,
+      "objeto": "Coleta e transporte de residuos",
+      "valor": "500000.00",
+      "data_assinatura": "2024-01-15",
+      "data_publicacao": "2024-01-20",
+      "fonte_dados": "https://dados.exemplo.gov.br/contratos/1",
+      "numero_processo": "PROC-2024-0001"
+    }
+  },
+  {
+    "model": "contratos.contrato",
+    "pk": 2,
+    "fields": {
+      "municipio": 1,
+      "empresa": 1,
+      "objeto": "Coleta e transporte de residuos",
+      "valor": "300000.00",
+      "data_assinatura": "2024-02-01",
+      "data_publicacao": "2024-02-03",
+      "fonte_dados": "https://dados.exemplo.gov.br/contratos/2",
+      "numero_processo": "PROC-2024-0002"
+    }
+  },
+  {
+    "model": "contratos.contrato",
+    "pk": 3,
+    "fields": {
+      "municipio": 1,
+      "empresa": 2,
+      "objeto": "Reforma de predios publicos",
+      "valor": "100000.00",
+      "data_assinatura": "2024-01-10",
+      "data_publicacao": "2024-01-12",
+      "fonte_dados": "https://dados.exemplo.gov.br/contratos/3",
+      "numero_processo": "PROC-2024-0003"
+    }
+  }
+]
