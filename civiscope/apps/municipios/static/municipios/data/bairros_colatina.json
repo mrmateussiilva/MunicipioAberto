@@ -1,0 +1,77 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Centro" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6320, -19.5400], [-40.6220, -19.5400], [-40.6220, -19.5300], [-40.6320, -19.5300], [-40.6320, -19.5400] ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "São Silvano" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6200, -19.5300], [-40.6100, -19.5300], [-40.6100, -19.5200], [-40.6200, -19.5200], [-40.6200, -19.5300] ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Honório Fraga" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6400, -19.5150], [-40.6300, -19.5150], [-40.6300, -19.5050], [-40.6400, -19.5050], [-40.6400, -19.5150] ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Vila Nova" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6170, -19.5500], [-40.6070, -19.5500], [-40.6070, -19.5400], [-40.6170, -19.5400], [-40.6170, -19.5500] ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Maria das Graças" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6430, -19.5470], [-40.6330, -19.5470], [-40.6330, -19.5370], [-40.6430, -19.5370], [-40.6430, -19.5470] ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Colatina Velha" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6500, -19.5600], [-40.6400, -19.5600], [-40.6400, -19.5500], [-40.6500, -19.5500], [-40.6500, -19.5600] ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Bela Vista" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6050, -19.5330], [-40.5950, -19.5330], [-40.5950, -19.5230], [-40.6050, -19.5230], [-40.6050, -19.5330] ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Castelo Branco" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6250, -19.5100], [-40.6150, -19.5100], [-40.6150, -19.5000], [-40.6250, -19.5000], [-40.6250, -19.5100] ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Santo Antônio" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[ [-40.6300, -19.5650], [-40.6200, -19.5650], [-40.6200, -19.5550], [-40.6300, -19.5550], [-40.6300, -19.5650] ]]
+      }
+    }
+  ]
+}

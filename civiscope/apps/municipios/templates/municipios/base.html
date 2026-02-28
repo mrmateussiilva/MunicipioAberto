@@ -1,0 +1,60 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CivisScope{% endblock %}</title>
+  {% block meta %}
+  <meta name="description" content="Pesquise contratos, empresas e indicadores públicos por cidade ou estado." />
+  {% endblock %}
+  <link rel="icon" type="image/svg+xml" href="{% static 'municipios/favicon.svg' %}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{% static 'municipios/css/main.css' %}" />
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body class="bg-background text-foreground">
+  <a class="sr-only focus:not-sr-only" href="#main-content">Ir para o conteúdo</a>
+
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 glass flex-shrink-0">
+      <div class="p-6">
+        <a href="{% url 'municipios:busca' %}" class="text-2xl font-bold">CivisScope</a>
+      </div>
+      <nav class="mt-6">
+        <a href="{% url 'municipios:busca' %}" class="block py-2 px-6 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+          Busca
+        </a>
+      </nav>
+    </aside>
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- Topbar -->
+      <header class="bg-card border-b border-border">
+        <div class="p-4">
+            {% block nav_back %}{% endblock %}
+        </div>
+      </header>
+      
+      <!-- Main content -->
+      <main id="main-content" class="flex-1 overflow-x-hidden overflow-y-auto bg-transparent">
+        {% block content %}{% endblock %}
+      </main>
+      
+      {% block footer %}
+      <footer class="p-4 border-t border-border bg-card">
+        <p class="text-sm text-muted-foreground">Dados públicos · CivisScope</p>
+      </footer>
+      {% endblock %}
+    </div>
+  </div>
+
+  {% block extra_js %}{% endblock %}
+</body>
+
+</html>

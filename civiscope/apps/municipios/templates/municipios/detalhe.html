@@ -1,338 +1,462 @@
+{% extends "municipios/base.html" %}
 {% load humanize %}
-<!DOCTYPE html>
-<html lang="pt-br">
+{% load static %}
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ municipio }} — CivisScope</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+{% block title %}{{ municipio.nome }} — CivisScope{% endblock %}
 
-        :root {
-            --bg: #0f1117;
-            --surface: #1a1d27;
-            --surface2: #22263a;
-            --border: #2e3250;
-            --accent: #6366f1;
-            --accent-hover: #818cf8;
-            --accent-dim: rgba(99, 102, 241, .15);
-            --green: #22c55e;
-            --red: #ef4444;
-            --text: #e2e8f0;
-            --muted: #64748b;
-            --radius: 12px;
-        }
+{% block meta %}
+<meta name="description" content="Detalhes de {{ municipio.nome }}: contratos, Câmara Municipal, vereadores e indicadores." />
+{% endblock %}
 
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-        }
+{% block nav_back %}
+<a class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground" href="{% url 'municipios:busca' %}">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+    <path d="M15 18l-6-6 6-6" />
+  </svg>
+  Voltar à busca
+</a>
+{% endblock %}
 
-        .topbar {
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            padding: 14px 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  .leaflet-popup-content-wrapper {
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border-radius: var(--radius);
+  }
 
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--muted);
-            text-decoration: none;
-            font-size: .875rem;
-            font-weight: 500;
-            transition: color .2s;
-        }
+  .leaflet-popup-tip {
+    background: hsl(var(--card));
+  }
+</style>
+{% endblock %}
 
-        .back-link:hover {
-            color: var(--text);
-        }
+{% block content %}
+{% block content %}
+<div class="p-6 sm:p-10">
+  <header class="mb-8">
+    <div>
+      <span class="text-xs font-semibold glass px-2 py-1 rounded-full">{{ municipio.estado }}</span>
+    </div>
+    <h1 class="text-3xl font-bold mt-2">{{ municipio.nome }}</h1>
+    <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+      <div class="glass rounded-lg p-4">
+        <div class="text-muted-foreground">👥 População</div>
+        <div class="text-2xl font-bold">{{ municipio.populacao|intcomma }}</div>
+      </div>
+      <div class="glass rounded-lg p-4">
+        <div class="text-muted-foreground">📄 Contratos</div>
+        <div class="text-2xl font-bold">{{ contratos|length }}</div>
+      </div>
+      {% if total_valor %}
+      <div class="glass rounded-lg p-4">
+        <div class="text-muted-foreground">💰 Total contratado</div>
+        <div class="text-2xl font-bold text-green-400">R$ {{ total_valor|floatformat:2|intcomma }}</div>
+      </div>
+      {% endif %}
+      <div class="glass rounded-lg p-4">
+        <div class="text-muted-foreground">🔢 Código IBGE</div>
+        <div class="text-2xl font-bold">{{ municipio.codigo_ibge }}</div>
+      </div>
+    </div>
+  </header>
 
-        .topbar-brand {
-            margin-left: auto;
-            font-weight: 800;
-            font-size: .95rem;
-            background: linear-gradient(135deg, #e2e8f0, var(--accent-hover));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+  <main>
+    <div class="border-b border-border">
+      <div class="tabs -mb-px flex space-x-8" role="tablist" aria-label="Seções da Câmara">
+        <button type="button" class="tab-btn active" role="tab" aria-selected="true" aria-controls="eleitos" id="tab-eleitos" data-tab="eleitos">Eleitos ({{ eleitos|length }})</button>
+        <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="nao-eleitos" id="tab-nao-eleitos" data-tab="nao-eleitos">Não Eleitos</button>
+        <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="grafo" id="tab-grafo" data-tab="grafo">🌐 Grafo</button>
+        <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="desempenho" id="tab-desempenho" data-tab="desempenho">📊 Desempenho</button>
+        <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="mapa" id="tab-mapa" data-tab="mapa">📍 Mapa</button>
+      </div>
+    </div>
 
-        .hero {
-            background: linear-gradient(135deg, #0f1117 0%, #1a1d27 50%, #1e1f3a 100%);
-            border-bottom: 1px solid var(--border);
-            padding: 48px 24px 40px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse 50% 60% at 20% 50%, rgba(99, 102, 241, .18) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-        }
-
-        .hero-inner {
-            max-width: 960px;
-            margin: 0 auto;
-        }
-
-        .estado-tag {
-            display: inline-flex;
-            align-items: center;
-            background: var(--accent-dim);
-            border: 1px solid rgba(99, 102, 241, .4);
-            color: var(--accent-hover);
-            font-size: .8rem;
-            font-weight: 700;
-            letter-spacing: .06em;
-            padding: 3px 12px;
-            border-radius: 99px;
-            margin-bottom: 14px;
-        }
-
-        .hero h1 {
-            font-size: clamp(1.8rem, 4vw, 2.8rem);
-            font-weight: 800;
-            letter-spacing: -.02em;
-            margin-bottom: 24px;
-        }
-
-        .kpi-row {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .kpi {
-            background: rgba(255, 255, 255, .04);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px 24px;
-            min-width: 160px;
-        }
-
-        .kpi-label {
-            font-size: .75rem;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: .07em;
-            margin-bottom: 4px;
-        }
-
-        .kpi-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .kpi-value.green {
-            color: var(--green);
-        }
-
-        .main {
-            max-width: 960px;
-            margin: 0 auto;
-            padding: 36px 24px 80px;
-        }
-
-        .section-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .section-title::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-        }
-
-        .table-wrap {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow: hidden;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        thead th {
-            background: var(--surface2);
-            padding: 12px 16px;
-            text-align: left;
-            font-size: .78rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .07em;
-            color: var(--muted);
-            border-bottom: 1px solid var(--border);
-        }
-
-        tbody tr {
-            border-bottom: 1px solid var(--border);
-            transition: background .15s;
-        }
-
-        tbody tr:last-child {
-            border-bottom: none;
-        }
-
-        tbody tr:hover {
-            background: rgba(255, 255, 255, .03);
-        }
-
-        td {
-            padding: 14px 16px;
-            font-size: .875rem;
-            vertical-align: top;
-        }
-
-        .td-empresa {
-            font-weight: 600;
-            color: var(--text);
-        }
-
-        .td-objeto {
-            color: var(--muted);
-            max-width: 280px;
-        }
-
-        .td-valor {
-            color: var(--green);
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .td-data {
-            color: var(--muted);
-            white-space: nowrap;
-        }
-
-        .td-num {
-            color: var(--muted);
-            font-size: .8rem;
-        }
-
-        .empty {
-            text-align: center;
-            padding: 60px 24px;
-            color: var(--muted);
-        }
-
-        .empty h3 {
-            color: var(--text);
-            margin-bottom: 8px;
-        }
-    </style>
-</head>
-
-<body>
-
-    <nav class="topbar">
-        <a class="back-link" href="{% url 'municipios:busca' %}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M15 18l-6-6 6-6" />
-            </svg>
-            Voltar à busca
-        </a>
-        <span class="topbar-brand">CivisScope</span>
-    </nav>
-
-    <header class="hero">
-        <div class="hero-inner">
-            <div class="estado-tag">{{ municipio.estado }}</div>
-            <h1>{{ municipio.nome }}</h1>
-            <div class="kpi-row">
-                <div class="kpi">
-                    <div class="kpi-label">👥 População</div>
-                    <div class="kpi-value">{{ municipio.populacao|intcomma }}</div>
-                </div>
-                <div class="kpi">
-                    <div class="kpi-label">📄 Contratos</div>
-                    <div class="kpi-value">{{ contratos|length }}</div>
-                </div>
-                {% if total_valor %}
-                <div class="kpi">
-                    <div class="kpi-label">💰 Total contratado</div>
-                    <div class="kpi-value green">R$ {{ total_valor|floatformat:2|intcomma }}</div>
-                </div>
+    <div class="mt-8">
+      <div id="eleitos" class="tab-content active" role="tabpanel" aria-labelledby="tab-eleitos">
+        {% for partido, lista in eleitos_por_partido.items %}
+        <div class="mb-8">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 flex items-center justify-center rounded-md glass font-bold text-xs">{{ partido|slice:":2" }}</div>
+            <div>
+              <h3 class="font-semibold">{{ partido }}</h3>
+              <span class="text-sm text-muted-foreground">{{ lista|length }} vaga{{ lista|length|pluralize:"s" }}</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {% for v in lista %}
+            <div class="glass rounded-lg p-4">
+              <h4 class="font-bold">{{ v.nome_urna }}</h4>
+              <div class="mt-2 flex gap-2">
+                <span class="text-xs font-semibold glass px-2 py-1 rounded-full">{{ v.partido_sigla }}</span>
+                {% if v.is_reeleito %}
+                <span class="text-xs font-semibold bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full">Reeleito</span>
                 {% endif %}
-                <div class="kpi">
-                    <div class="kpi-label">🔢 Código IBGE</div>
-                    <div class="kpi-value" style="font-size:1.2rem">{{ municipio.codigo_ibge }}</div>
-                </div>
+              </div>
+              <div class="text-sm text-muted-foreground mt-3">{{ v.status_eleicao }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-16 glass rounded-lg">
+          <p>Nenhum vereador eleito sincronizado.</p>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div id="nao-eleitos" class="tab-content" role="tabpanel" aria-labelledby="tab-nao-eleitos" hidden>
+        <div class="overflow-x-auto glass rounded-lg">
+          <table class="min-w-full divide-y divide-border">
+            <thead class="glass">
+              <tr>
+                <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Candidato</th>
+                <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Partido</th>
+                <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody class="glass divide-y divide-border">
+              {% for v in nao_eleitos %}
+              <tr>
+                <td class="py-4 px-4 whitespace-nowrap">{{ v.nome_urna }}</td>
+                <td class="py-4 px-4 whitespace-nowrap"><span class="text-xs font-semibold glass px-2 py-1 rounded-full">{{ v.partido_sigla }}</span></td>
+                <td class="py-4 px-4 whitespace-nowrap">{{ v.status_eleicao }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="py-8 text-center text-muted-foreground">Nenhum candidato extra.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="grafo" class="tab-content" role="tabpanel" aria-labelledby="tab-grafo" hidden>
+        <div class="flex flex-col lg:flex-row gap-6">
+          <div id="graph-container" class="flex-1 h-96 lg:h-auto glass rounded-lg"></div>
+          <div id="graph-sidebar" class="w-full lg:w-80 glass rounded-lg p-4">
+            <div class="graph-sidebar-empty text-center text-muted-foreground">
+              <span class="text-3xl">👆</span>
+              <p>Clique em um vereador para ver seus projetos e conexões.</p>
+            </div>
+          </div>
+        </div>
+        <p class="text-sm text-muted-foreground mt-4">* O grafo agrupa vereadores por afinidade partidária e coligação.</p>
+      </div>
+
+      <div id="desempenho" class="tab-content" role="tabpanel" aria-labelledby="tab-desempenho" hidden>
+        <div class="glass rounded-lg p-6 h-96">
+          <canvas id="efficiencyChart" aria-label="Gráfico de eficiência legislativa"></canvas>
+        </div>
+        <p class="text-sm text-muted-foreground mt-4">* Exibe o total de projetos apresentados vs. projetos aprovados por cada vereador eleito.</p>
+      </div>
+
+      <div id="mapa" class="tab-content" role="tabpanel" aria-labelledby="tab-mapa" hidden>
+        <div id="impact-map" class="h-96 w-full rounded-lg border border-border"></div>
+        <div class="mt-4 flex gap-6 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                <span>Projetos de Lei</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                <span>Contratos Públicos</span>
             </div>
         </div>
-    </header>
+        <p class="text-sm text-muted-foreground mt-4">* O mapa projeta o impacto geográfico de ações legislativas e gastos públicos.</p>
+      </div>
+    </div>
 
-    <main class="main">
-        <div class="section-title">Contratos públicos</div>
+    <div class="mt-12">
+      <h2 class="text-2xl font-bold mb-4">Contratos Públicos</h2>
+      {% if contratos %}
+      <div class="overflow-x-auto glass rounded-lg">
+        <table class="min-w-full divide-y divide-border">
+          <thead class="glass">
+            <tr>
+              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Empresa</th>
+              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Objeto</th>
+              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Valor</th>
+              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Assinatura</th>
+              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nº Processo</th>
+            </tr>
+          </thead>
+          <tbody class="glass divide-y divide-border">
+            {% for c in contratos %}
+            <tr>
+              <td class="py-4 px-4 whitespace-nowrap font-medium">{{ c.empresa.nome }}</td>
+              <td class="py-4 px-4 text-muted-foreground max-w-sm truncate">{{ c.objeto }}</td>
+              <td class="py-4 px-4 whitespace-nowrap text-green-400 font-semibold">R$ {{ c.valor|floatformat:2|intcomma }}</td>
+              <td class="py-4 px-4 whitespace-nowrap text-muted-foreground">{{ c.data_assinatura|date:"d/m/Y" }}</td>
+              <td class="py-4 px-4 whitespace-nowrap text-muted-foreground">{{ c.numero_processo }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-16 glass rounded-lg">
+        <h3>Nenhum contrato cadastrado</h3>
+      </div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}
 
-        {% if contratos %}
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Empresa</th>
-                        <th>Objeto</th>
-                        <th>Valor</th>
-                        <th>Assinatura</th>
-                        <th>Nº Processo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in contratos %}
-                    <tr>
-                        <td class="td-empresa">{{ c.empresa.nome }}</td>
-                        <td class="td-objeto">{{ c.objeto|truncatewords:12 }}</td>
-                        <td class="td-valor">R$ {{ c.valor|floatformat:2|intcomma }}</td>
-                        <td class="td-data">{{ c.data_assinatura|date:"d/m/Y" }}</td>
-                        <td class="td-num">{{ c.numero_processo }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="empty">
-            <h3>Nenhum contrato cadastrado</h3>
-            <p>Este município ainda não possui contratos registrados no sistema.</p>
-        </div>
-        {% endif %}
-    </main>
+{{ grafo_nodes|json_script:"grafo-nodes-data" }}
+{{ grafo_links|json_script:"grafo-links-data" }}
+{{ performance_data|json_script:"performance-data" }}
+{{ map_points|json_script:"map-points-data" }}
+{% endblock %}
 
-</body>
 
-</html>
+{% block extra_js %}
+<script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function() {
+  let chartsInitialized = { performance: false, map: false, graph: false };
+  let mapInstance = null;
+  const GeoUtils = (function() {
+    let neighborhoodData = null;
+    const centroidCache = new Map();
+    async function loadGeoJSON(url) {
+      if (neighborhoodData) return neighborhoodData;
+      try {
+        const response = await fetch(url);
+        neighborhoodData = await response.json();
+        return neighborhoodData;
+      } catch (err) {
+        console.error('Error loading GeoJSON:', err);
+        return null;
+      }
+    }
+    function getBairroCentroide(nomeBairro) {
+      if (!neighborhoodData || !nomeBairro) return null;
+      if (centroidCache.has(nomeBairro)) return centroidCache.get(nomeBairro);
+      const feature = neighborhoodData.features.find(f => f.properties && f.properties.name && f.properties.name.toLowerCase() === nomeBairro.toLowerCase());
+      if (feature) {
+        try {
+          const centroid = turf.centroid(feature);
+          const coords = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
+          centroidCache.set(nomeBairro, coords);
+          return coords;
+        } catch (e) { return null; }
+      }
+      return null;
+    }
+    return { loadGeoJSON, getBairroCentroide };
+  })();
+  window.getBairroCentroide = GeoUtils.getBairroCentroide;
+
+  function showTab(id) {
+    document.querySelectorAll('.tab-content').forEach(c => {
+      c.style.display = 'none';
+    });
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active', 'border-primary', 'text-primary');
+      b.classList.add('border-transparent', 'text-muted-foreground');
+      b.setAttribute('aria-selected', 'false');
+    });
+    const panel = document.getElementById(id);
+    const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+    if (panel) panel.style.display = 'block';
+    if (btn) {
+      btn.classList.add('active', 'border-primary', 'text-primary');
+      btn.classList.remove('border-transparent', 'text-muted-foreground');
+      btn.setAttribute('aria-selected', 'true');
+    }
+    if (id === 'grafo' && !chartsInitialized.graph) renderGraph();
+    if (id === 'desempenho' && !chartsInitialized.performance) renderPerformanceChart();
+    if (id === 'mapa' && !chartsInitialized.map) renderMap();
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() { showTab(this.getAttribute('data-tab')) });
+  });
+
+  // Initial tab setup
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.querySelector('.tab-content.active').style.display = 'block';
+  document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.add('border-b-2', 'py-4', 'px-1', 'text-sm', 'font-medium');
+      if(b.classList.contains('active')) {
+          b.classList.add('border-primary', 'text-primary');
+          b.classList.remove('border-transparent', 'text-muted-foreground');
+      } else {
+          b.classList.add('border-transparent', 'text-muted-foreground', 'hover:border-border', 'hover:text-foreground');
+      }
+  });
+
+
+  function renderPerformanceChart() {
+    const dataEl = document.getElementById('performance-data');
+    if (!dataEl) return;
+    const data = JSON.parse(dataEl.textContent);
+    const ctx = document.getElementById('efficiencyChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(d => d.id),
+        datasets: [
+          { label: 'Projetos Aprovados', data: data.map(d => d.aprovados), backgroundColor: 'hsl(var(--primary))', borderRadius: 4 },
+          { label: 'Total de Projetos', data: data.map(d => d.total), backgroundColor: 'hsl(var(--secondary))', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: 'hsl(var(--muted-foreground))' } } },
+        scales: {
+          x: { ticks: { color: 'hsl(var(--muted-foreground))' }, grid: { display: false } },
+          y: { ticks: { color: 'hsl(var(--muted-foreground))' }, grid: { color: 'hsl(var(--border))' } }
+        }
+      }
+    });
+    chartsInitialized.performance = true;
+  }
+
+  function renderGraph() {
+    const container = d3.select('#graph-container');
+    if(container.select('svg').node()) return; // Already rendered
+    const width = container.node().getBoundingClientRect().width;
+    const height = 400;
+    const nodesData = JSON.parse(document.getElementById('grafo-nodes-data').textContent);
+    const links = JSON.parse(document.getElementById('grafo-links-data').textContent);
+    const nodes = nodesData.map(d => ({ ...d, size: d.reeleito ? 16 : 10 }));
+    
+    const svg = container.append('svg').attr('width', '100%').attr('height', height).attr('viewBox', [0, 0, width, height]);
+    
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(100).strength(0.5))
+      .force('charge', d3.forceManyBody().strength(-150))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(d => d.size + 20));
+
+    const link = svg.append('g').attr('stroke', 'hsl(var(--border))').attr('stroke-opacity', 0.6)
+      .selectAll('line').data(links).join('line');
+
+    const partyColors = d3.scaleOrdinal(d3.schemeCategory10);
+    const node = svg.append('g').selectAll('g').data(nodes).join('g')
+      .attr('cursor', 'pointer')
+      .on('click', (event, d) => showDetails(d))
+      .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+
+    node.append('circle')
+      .attr('r', d => d.size)
+      .attr('fill', d => partyColors(d.group))
+      .attr('stroke', 'hsl(var(--background))')
+      .attr('stroke-width', 2);
+    
+    node.append('text')
+      .attr('x', d => d.size + 4)
+      .attr('y', '0.31em')
+      .attr('font-size', '10px')
+      .attr('fill', 'hsl(var(--foreground))')
+      .text(d => d.id);
+
+    simulation.on('tick', () => {
+      link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+    function showDetails(d) {
+        const sidebar = document.getElementById('graph-sidebar');
+        sidebar.innerHTML = `
+            <div class="flex items-center gap-4 mb-4">
+                <img src="${d.foto_url}" alt="" class="w-16 h-16 rounded-full border-2" style="border-color: ${partyColors(d.group)}">
+                <div>
+                    <h4 class="font-bold">${d.id}</h4>
+                    <span class="text-xs font-semibold px-2 py-1 rounded-full" style="background-color: ${partyColors(d.group)}33; color: ${partyColors(d.group)}">${d.group}</span>
+                </div>
+            </div>
+            <div class="text-sm">
+                <div class="mb-3">
+                    <small class="text-muted-foreground">Eficiência</small>
+                    <div class="w-full bg-secondary rounded-full h-2.5">
+                        <div class="bg-primary h-2.5 rounded-full" style="width: ${d.eficiencia}%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>${d.aprovados}/${d.total} aprovados</span>
+                        <span>${d.eficiencia}%</span>
+                    </div>
+                </div>
+                <h5 class="font-semibold text-xs text-muted-foreground uppercase tracking-wider mt-4 mb-2">Projetos em Destaque</h5>
+                <ul class="space-y-2">
+                    ${d.projetos.map(p => `<li class="p-2 bg-secondary rounded-md text-xs">${p}</li>`).join('') || '<li class="text-xs text-muted-foreground">Nenhum projeto.</li>'}
+                </ul>
+            </div>
+        `;
+    }
+
+    function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+    }
+    function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+    }
+    function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+    }
+    chartsInitialized.graph = true;
+  }
+
+  async function renderMap() {
+    const dataEl = document.getElementById('map-points-data');
+    if (!dataEl || mapInstance) return;
+    const data = JSON.parse(dataEl.textContent);
+    if (!data || data.length === 0) return;
+    
+    await GeoUtils.loadGeoJSON("{% static 'municipios/data/bairros_colatina.json' %}");
+    const fallbackCenter = [-19.5350, -40.6270];
+    
+    mapInstance = L.map('impact-map').setView(fallbackCenter, 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(mapInstance);
+
+    const projectColor = '#3b82f6', contractColor = '#facc15';
+
+    data.forEach(p => {
+      const isProject = p.tipo === 'projeto';
+      const color = isProject ? projectColor : contractColor;
+      const centroide = GeoUtils.getBairroCentroide(p.bairro);
+      let [lat, lng] = centroide || [p.lat || fallbackCenter[0], p.lng || fallbackCenter[1]];
+      lat += (Math.random() - 0.5) * 0.004;
+      lng += (Math.random() - 0.5) * 0.004;
+      
+      const marker = L.circleMarker([lat, lng], {
+          radius: 6,
+          fillColor: color,
+          color: "white",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
+      }).addTo(mapInstance);
+
+      const popupContent = `
+        <div class="min-w-[200px] p-1">
+            <h4 class="font-bold mb-2">${p.titulo}</h4>
+            <div class="text-xs text-muted-foreground space-y-1">
+                <p><strong>Bairro:</strong> ${p.bairro}</p>
+                ${p.autor ? `<p><strong>Autor:</strong> ${p.autor}</p>`: ''}
+                ${p.valor ? `<p><strong>Valor:</strong> <span class="font-semibold text-green-400">R$ ${p.valor.toLocaleString('pt-BR')}</span></p>` : ''}
+            </div>
+        </div>`;
+      marker.bindPopup(popupContent);
+    });
+    chartsInitialized.map = true;
+    setTimeout(() => mapInstance && mapInstance.invalidateSize(), 200);
+  }
+})();
+</script>
+{% endblock %}

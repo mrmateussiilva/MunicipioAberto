@@ -83,11 +83,12 @@ def busca(request):
                         "Informe cidade e UF para sincronizar dados públicos."
                     )
 
-                sync_count = IngestaoAPIService().ingerir_contratos_pncp_por_municipio(
+                resultados = IngestaoAPIService().ingerir_tudo_por_municipio(
                     municipio_nome=query,
                     estado_uf=estado_filter,
                     paginas=1,
                 )
+                sync_count = sum(resultados.values())
             except Exception as exc:  # noqa: BLE001
                 sync_error = str(exc)
                 logger.warning(
@@ -152,12 +153,155 @@ def autocomplete_cidades(request):
 
 
 def detalhe_municipio(request, codigo_ibge):
-    """Detalhe de um município e seus contratos."""
+    """Detalhe de um município e seus candidatos."""
     municipio = get_object_or_404(Municipio, codigo_ibge=codigo_ibge)
     contratos = municipio.contratos.select_related("empresa").order_by(
         "-data_assinatura"
     )
     total_valor = contratos.aggregate(total=Sum("valor"))["total"]
+
+    # Separar e agrupar candidatos (Filtro estrito para eleitos)
+    todos_candidatos = municipio.vereadores.all()
+    # No TSE, status de vitória são: ELEITO, ELEITO POR QP ou ELEITO POR MÉDIA
+    eleitos_status_validos = ["eleito", "eleito por qp", "eleito por média"]
+    eleitos = [
+        c for c in todos_candidatos 
+        if c.status_eleicao.lower() in eleitos_status_validos
+    ]
+    nao_eleitos = [
+        c for c in todos_candidatos 
+        if c.status_eleicao.lower() not in eleitos_status_validos
+    ]
+
+    # Agrupar eleitos por partido
+    eleitos_por_partido = {}
+    for c in eleitos:
+        eleitos_por_partido.setdefault(c.partido_sigla, []).append(c)
+
+    # Dados para o Grafo e Gráficos (JSON serializable)
+    # Por enquanto, mockando alguns dados de performance se não existirem
+    import random
+    
+    grafo_nodes = []
+    performance_data = []
+    
+    for c in eleitos:
+        # Mock de performance caso os campos estejam zerados
+        aprovados_count = c.projetos_aprovados or random.randint(2, 12)
+        total_count = c.total_projetos or aprovados_count + random.randint(5, 15)
+        eficiencia = round((aprovados_count / total_count) * 100, 1) if total_count > 0 else 0
+        
+        # Mock de títulos de projetos
+        projetos_mock = [
+            f"Projeto de Lei {random.randint(100, 999)}/2024: {'Melhoria na Saúde' if i % 2 == 0 else 'Educação Municipal'}"
+            for i in range(min(aprovados_count, 5))
+        ]
+        
+        node = {
+            "id": c.nome_urna,
+            "group": c.partido_sigla,
+            "coligacao": c.coligacao or c.partido_sigla,
+            "reeleito": c.is_reeleito,
+            "aprovados": aprovados_count,
+            "total": total_count,
+            "eficiencia": eficiencia,
+            "projetos": projetos_mock,
+            "foto_url": c.foto_url or "https://via.placeholder.com/150"
+        }
+        grafo_nodes.append(node)
+        performance_data.append(node)
+
+    # Dados para o Grafo (Baseado em Votos)
+    # Lógica: Se dois vereadores votaram "SIM" no mesmo projeto, aumenta a conexão
+    grafo_links = []
+    
+    # Gerar votos aleatórios para os vereadores eleitos em 10 projetos "virtuais"
+    # (No futuro isso virá do banco de dados)
+    projetos_virtuais = range(1, 11)
+    votos_vereadores = {}
+    
+    # Criar perfis de voto por partido para gerar "clusters" mais naturais
+    perfis_partidos = {p: random.random() for p in eleitos_por_partido.keys()}
+    
+    for c in eleitos:
+        # O perfil de voto é influenciado pelo partido (70%) + aleatoriedade (30%)
+        perfil_base = perfis_partidos.get(c.partido_sigla, 0.5)
+        perfil_final = (perfil_base * 0.7) + (random.random() * 0.3)
+        
+        votos_vereadores[c.nome_urna] = [
+            "SIM" if random.random() < perfil_final else "NAO" 
+            for _ in projetos_virtuais
+        ]
+
+    # Calcular afinidade de voto (links)
+    for i in range(len(eleitos)):
+        for j in range(i + 1, len(eleitos)):
+            v1 = eleitos[i].nome_urna
+            v2 = eleitos[j].nome_urna
+            
+            # Contar quantos votos iguais eles tiveram
+            concordancia = sum(
+                1 for k in range(len(projetos_virtuais)) 
+                if votos_vereadores[v1][k] == votos_vereadores[v2][k]
+            )
+            
+            # Apenas criar link se a concordância for alta (ex: > 60%)
+            # Reduzido de 7 para 6 para mostrar mais conexões relevantes
+            if concordancia >= 6:
+                grafo_links.append({
+                    "source": v1,
+                    "target": v2,
+                    "value": concordancia
+                })
+
+    # Dados para o Mapa de Impacto (Mock)
+    map_points = []
+    # Coordenadas reais aproximadas de bairros em Colatina para o Mock
+    bairros_coords = {
+        "Centro": (-19.5350, -40.6270),
+        "São Silvano": (-19.5250, -40.6150),
+        "Honório Fraga": (-19.5100, -40.6350),
+        "Vila Nova": (-19.5450, -40.6120),
+        "Maria das Graças": (-19.5420, -40.6380),
+        "Colatina Velha": (-19.5550, -40.6450),
+        "Bela Vista": (-19.5280, -40.6000),
+        "Castelo Branco": (-19.5050, -40.6200),
+        "Santo Antônio": (-19.5600, -40.6250)
+    }
+    bairros_lista = list(bairros_coords.keys())
+
+    # Mock de pontos para Projetos (Ideias Legislativas)
+    for node in grafo_nodes[:8]: 
+        # Para o mock, vamos atribuir um bairro de "foco" para o vereador/projeto
+        bairro_alvo = random.choice(bairros_lista)
+        base_lat, base_lng = bairros_coords.get(bairro_alvo, bairros_coords["Centro"])
+        
+        # Inserir o bairro no título para ficar claro na UI
+        ponto = {
+            "lat": base_lat + random.uniform(-0.003, 0.003),
+            "lng": base_lng + random.uniform(-0.003, 0.003),
+            "titulo": f"Projeto em {bairro_alvo}: {node['projetos'][0] if node['projetos'] else 'Melhoria Urbana'}",
+            "tipo": "projeto",
+            "autor": node["id"],
+            "bairro": bairro_alvo
+        }
+        map_points.append(ponto)
+
+    # Mock de pontos para Contratos (Gastos Públicos)
+    for c in contratos[:8]:
+        # Tenta usar o bairro do banco de dados (se houver), senão sorteia
+        bairro_alvo = c.bairro if c.bairro else random.choice(bairros_lista)
+        base_lat, base_lng = bairros_coords.get(bairro_alvo, bairros_coords["Centro"])
+        
+        ponto = {
+            "lat": base_lat + random.uniform(-0.003, 0.003),
+            "lng": base_lng + random.uniform(-0.003, 0.003),
+            "titulo": f"Gasto Público em {bairro_alvo}: {c.objeto[:50]}...",
+            "tipo": "contrato",
+            "valor": float(c.valor),
+            "bairro": bairro_alvo
+        }
+        map_points.append(ponto)
 
     return render(
         request,
@@ -166,5 +310,12 @@ def detalhe_municipio(request, codigo_ibge):
             "municipio": municipio,
             "contratos": contratos,
             "total_valor": total_valor,
+            "eleitos": eleitos,
+            "eleitos_por_partido": eleitos_por_partido,
+            "nao_eleitos": nao_eleitos,
+            "grafo_nodes": grafo_nodes,
+            "grafo_links": grafo_links,
+            "performance_data": performance_data,
+            "map_points": map_points,
         },
     )

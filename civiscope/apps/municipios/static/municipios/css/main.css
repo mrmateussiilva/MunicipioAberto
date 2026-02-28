@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0D1117;
+  --foreground: #C9D1D9;
+  --card: rgba(33, 38, 45, 0.8);
+  --card-foreground: #C9D1D9;
+  --popover: #161B22;
+  --popover-foreground: #C9D1D9;
+  --primary: #58A6FF;
+  --primary-foreground: #0D1117;
+  --secondary: #21262D;
+  --secondary-foreground: #C9D1D9;
+  --muted: #21262D;
+  --muted-foreground: #8B949E;
+  --accent: #30363D;
+  --accent-foreground: #C9D1D9;
+  --destructive: #DA3633;
+  --destructive-foreground: #C9D1D9;
+  --border: #30363D;
+  --input: #21262D;
+  --ring: #58A6FF;
+  --radius: 0.5rem;
+}
+
+body {
+  @apply bg-background text-foreground;
+  font-family: 'Inter', sans-serif;
+  background-image: radial-gradient(at 80% 0%, hsla(212,40%,50%,0.3) 0px, transparent 50%),
+                    radial-gradient(at 0% 50%, hsla(283,40%,50%,0.3) 0px, transparent 50%);
+}
+
+.glass {
+  background-color: var(--card);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+}
+
+.search-actions select {
+    background-color: hsl(var(--secondary));
+}
+
+#graph-container svg {
+    cursor: grab;
+}
+
+#graph-container svg:active {
+    cursor: grabbing;
+}
+
+.tab-btn.active {
+    border-color: var(--primary);
+}
+
+#impact-map {
+    background-color: var(--background);
+}
