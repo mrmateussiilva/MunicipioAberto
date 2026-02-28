@@ -18,6 +18,14 @@ CONTRATO_FIXTURE = {
     "niFornecedor": "98765432000111",
     "nomeUnidadeOrgao": "Ministério da Educação",
     "codigoUnidadeOrgao": "00394460000141",
+    "unidadeOrgao": {
+        "codigoUnidade": "26246",
+        "nomeUnidade": "Campus Colatina",
+        "codigoIbge": 3201506,
+        "municipioNome": "Colatina",
+        "ufSigla": "ES",
+        "ufNome": "Espirito Santo",
+    },
 }
 
 ITEM_FIXTURE = {
@@ -59,6 +67,8 @@ class TestPNCPClient:
         assert c.numero_contrato == "CT-PNCP-001"
         assert float(c.valor_global) == 250000.50
         assert c.ni_fornecedor == "98765432000111"
+        assert c.unidade_orgao is not None
+        assert c.unidade_orgao.codigo_ibge == 3201506
 
     def test_contratos_date_parsing(self):
         client = PNCPClient()

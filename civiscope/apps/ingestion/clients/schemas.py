@@ -112,6 +112,17 @@ class PNCPItemSchema(BaseModel):
             return Decimal("0")
 
 
+class PNCPUnidadeSchema(BaseModel):
+    codigo_unidade: str = Field(default="", alias="codigoUnidade")
+    nome_unidade: str = Field(default="", alias="nomeUnidade")
+    codigo_ibge: int | None = Field(default=None, alias="codigoIbge")
+    municipio_nome: str = Field(default="", alias="municipioNome")
+    uf_sigla: str = Field(default="", alias="ufSigla")
+    uf_nome: str = Field(default="", alias="ufNome")
+
+    model_config = {"populate_by_name": True}
+
+
 class PNCPContratoSchema(BaseModel):
     numero_controle_pncp: str = Field(default="", alias="numeroControlePNCP")
     numero_contrato: str = Field(default="", alias="numeroContratoEmpenho")
@@ -124,6 +135,7 @@ class PNCPContratoSchema(BaseModel):
     ni_fornecedor: str = Field(default="", alias="niFornecedor")
     nome_orgao: str = Field(default="", alias="nomeUnidadeOrgao")
     codigo_unidade_orgao: str = Field(default="", alias="codigoUnidadeOrgao")
+    unidade_orgao: PNCPUnidadeSchema | None = Field(default=None, alias="unidadeOrgao")
 
     model_config = {"populate_by_name": True}
 

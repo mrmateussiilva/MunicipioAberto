@@ -55,15 +55,15 @@ class TransparenciaClient(BaseAPIClient):
 
     def contratos(
         self,
-        codigo_ibge: str | None = None,
+        codigo_orgao: str | None = None,
         cnpj_fornecedor: str | None = None,
         paginas: int | None = None,
         tamanho_pagina: int = 100,
     ) -> Iterator[TransparenciaContratoSchema]:
         """Itera sobre contratos do Portal da Transparência."""
         extra: dict[str, Any] = {}
-        if codigo_ibge:
-            extra["codigoIbge"] = codigo_ibge
+        if codigo_orgao:
+            extra["codigoOrgao"] = codigo_orgao
         if cnpj_fornecedor:
             extra["cnpjFornecedor"] = cnpj_fornecedor
 

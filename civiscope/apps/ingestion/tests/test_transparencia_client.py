@@ -57,7 +57,7 @@ class TestTransparenciaClient:
             transport=_make_transport([[CONTRATO_FIXTURE], []])
         )
 
-        contratos = list(client.contratos(codigo_ibge="3550308"))
+        contratos = list(client.contratos(codigo_orgao="26246"))
         assert len(contratos) == 1
 
         c = contratos[0]
@@ -73,7 +73,7 @@ class TestTransparenciaClient:
             transport=_make_transport([[CONTRATO_FIXTURE], []])
         )
 
-        contratos = list(client.contratos(codigo_ibge="3550308"))
+        contratos = list(client.contratos(codigo_orgao="26246"))
         c = contratos[0]
         assert c.data_assinatura_date is not None
         assert c.data_assinatura_date.year == 2024
@@ -88,7 +88,7 @@ class TestTransparenciaClient:
             transport=_make_transport(pages)
         )
 
-        contratos = list(client.contratos(codigo_ibge="3550308", paginas=2))
+        contratos = list(client.contratos(codigo_orgao="26246", paginas=2))
         assert len(contratos) == 2
 
     def test_contratos_skips_invalid_records(self):
@@ -100,7 +100,7 @@ class TestTransparenciaClient:
         )
 
         # Schema validation has defaults, so both should be yielded without crashing
-        contratos = list(client.contratos(codigo_ibge="3550308"))
+        contratos = list(client.contratos(codigo_orgao="26246"))
         assert len(contratos) == 2
 
     def test_licitacoes_yields_valid_schemas(self):

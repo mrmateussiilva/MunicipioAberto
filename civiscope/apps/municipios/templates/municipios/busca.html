@@ -164,9 +164,36 @@
       white-space: nowrap;
     }
 
+    .btn-sync {
+      background: transparent;
+      color: var(--accent-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      white-space: nowrap;
+    }
+
     .btn-search:hover {
       background: var(--accent-hover);
       transform: translateY(-1px);
+    }
+
+    .btn-sync:hover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .btn-sync:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      border-color: var(--border);
+      background: transparent;
+      color: var(--muted);
     }
 
     .btn-search:active {
@@ -265,6 +292,25 @@
     .result-header span {
       color: var(--muted);
       font-size: .875rem;
+    }
+
+    .sync-feedback {
+      margin-bottom: 20px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: .9rem;
+    }
+
+    .sync-feedback.success {
+      border-color: rgba(34, 197, 94, .35);
+      color: #bbf7d0;
+    }
+
+    .sync-feedback.error {
+      border-color: rgba(239, 68, 68, .35);
+      color: #fecaca;
     }
 
     /* ── Cards grid ── */
@@ -465,40 +511,27 @@
         </div>
         <select name="estado">
           <option value="">Todos os estados</option>
-          <option value="AC" {% if estado_filter=="AC" %}selected{% endif %}>AC — Acre</option>
-          <option value="AL" {% if estado_filter=="AL" %}selected{% endif %}>AL — Alagoas</option>
-          <option value="AP" {% if estado_filter=="AP" %}selected{% endif %}>AP — Amapá</option>
-          <option value="AM" {% if estado_filter=="AM" %}selected{% endif %}>AM — Amazonas</option>
-          <option value="BA" {% if estado_filter=="BA" %}selected{% endif %}>BA — Bahia</option>
-          <option value="CE" {% if estado_filter=="CE" %}selected{% endif %}>CE — Ceará</option>
-          <option value="DF" {% if estado_filter=="DF" %}selected{% endif %}>DF — Distrito Federal</option>
-          <option value="ES" {% if estado_filter=="ES" %}selected{% endif %}>ES — Espírito Santo</option>
-          <option value="GO" {% if estado_filter=="GO" %}selected{% endif %}>GO — Goiás</option>
-          <option value="MA" {% if estado_filter=="MA" %}selected{% endif %}>MA — Maranhão</option>
-          <option value="MT" {% if estado_filter=="MT" %}selected{% endif %}>MT — Mato Grosso</option>
-          <option value="MS" {% if estado_filter=="MS" %}selected{% endif %}>MS — Mato Grosso do Sul</option>
-          <option value="MG" {% if estado_filter=="MG" %}selected{% endif %}>MG — Minas Gerais</option>
-          <option value="PA" {% if estado_filter=="PA" %}selected{% endif %}>PA — Pará</option>
-          <option value="PB" {% if estado_filter=="PB" %}selected{% endif %}>PB — Paraíba</option>
-          <option value="PR" {% if estado_filter=="PR" %}selected{% endif %}>PR — Paraná</option>
-          <option value="PE" {% if estado_filter=="PE" %}selected{% endif %}>PE — Pernambuco</option>
-          <option value="PI" {% if estado_filter=="PI" %}selected{% endif %}>PI — Piauí</option>
-          <option value="RJ" {% if estado_filter=="RJ" %}selected{% endif %}>RJ — Rio de Janeiro</option>
-          <option value="RN" {% if estado_filter=="RN" %}selected{% endif %}>RN — Rio Grande do Norte</option>
-          <option value="RS" {% if estado_filter=="RS" %}selected{% endif %}>RS — Rio Grande do Sul</option>
-          <option value="RO" {% if estado_filter=="RO" %}selected{% endif %}>RO — Rondônia</option>
-          <option value="RR" {% if estado_filter=="RR" %}selected{% endif %}>RR — Roraima</option>
-          <option value="SC" {% if estado_filter=="SC" %}selected{% endif %}>SC — Santa Catarina</option>
-          <option value="SP" {% if estado_filter=="SP" %}selected{% endif %}>SP — São Paulo</option>
-          <option value="SE" {% if estado_filter=="SE" %}selected{% endif %}>SE — Sergipe</option>
-          <option value="TO" {% if estado_filter=="TO" %}selected{% endif %}>TO — Tocantins</option>
+          {% for uf in estados %}
+          <option value="{{ uf.value }}" {% if uf.selected %}selected{% endif %}>{{ uf.label }}</option>
+          {% endfor %}
         </select>
+        <button type="submit" name="action" value="sync" class="btn-sync" {% if not sync_enabled %}disabled title="Informe cidade e UF para sincronizar"{% endif %}>Sincronizar via PNCP</button>
         <button type="submit" class="btn-search">Buscar</button>
       </div>
     </form>
   </header>
 
   <main class="container">
+
+    {% if sync_error %}
+    <div class="sync-feedback error">{{ sync_error }}</div>
+    {% elif sync_count != None %}
+    <div class="sync-feedback success">{{ sync_count }} contrato{{ sync_count|pluralize }} sincronizado{{ sync_count|pluralize }}.</div>
+    {% endif %}
+
+    {% if query or estado_filter and not sync_enabled %}
+    <div class="sync-feedback">Informe cidade e UF para sincronizar dados públicos pelo PNCP.</div>
+    {% endif %}
 
     {% if query or estado_filter %}
     {% if municipios %}
@@ -518,8 +551,7 @@
     </div>
 
     <div class="result-header">
-      <h2>Resultados para "{% if query %}{{ query }}{% endif %}{% if query and estado_filter %} · {% endif %}{% if
-        estado_filter %}{{ estado_filter }}{% endif %}"</h2>
+      <h2>Resultados para "{% if query %}{{ query }}{% endif %}{% if query and estado_filter %} - {% endif %}{% if estado_filter %}{{ estado_filter }}{% endif %}"</h2>
       <span>{{ municipios|length }} encontrado{{ municipios|length|pluralize }}</span>
     </div>
 
@@ -608,7 +640,12 @@
       }
 
       debounceTimer = setTimeout(() => {
-        fetch(`/municipios/autocomplete/?q=${encodeURIComponent(query)}`)
+        const stateSelect = searchForm.querySelector('select[name="estado"]');
+        const estadoAtual = stateSelect ? stateSelect.value : '';
+        const params = new URLSearchParams({ q: query });
+        if (estadoAtual) params.append('estado', estadoAtual);
+
+        fetch(`/municipios/autocomplete/?${params.toString()}`)
           .then(res => res.json())
           .then(data => {
             if (data.length === 0) {
@@ -629,7 +666,6 @@
                 const nome = item.getAttribute('data-nome');
                 const estado = item.getAttribute('data-estado');
                 searchInput.value = nome;
-                const stateSelect = searchForm.querySelector('select[name="estado"]');
                 if (stateSelect) stateSelect.value = estado;
                 resultsDiv.style.display = 'none';
                 searchForm.submit();

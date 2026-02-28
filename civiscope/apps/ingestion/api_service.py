@@ -11,6 +11,7 @@ from apps.empresas.services import EmpresaService
 from apps.municipios.models import Municipio
 from apps.municipios.services import MunicipioService
 
+from .clients.ibge import IBGEClient
 from .clients.pncp import PNCPClient
 from .clients.schemas import PNCPContratoSchema, TransparenciaContratoSchema
 from .clients.transparencia import TransparenciaClient
@@ -30,7 +31,8 @@ class IngestaoAPIService:
 
     def ingerir_contratos_transparencia(
         self,
-        codigo_ibge: str,
+        codigo_orgao: str = "",
+        codigo_ibge: str = "",
         paginas: int | None = None,
         municipio_nome: str = "",
         estado_uf: str = "BR",
@@ -41,12 +43,18 @@ class IngestaoAPIService:
 
         Returns the number of contracts created or retrieved.
         """
+        if not codigo_orgao:
+            raise ValueError(
+                "A API de contratos do Portal da Transparência exige codigoOrgao. "
+                "Sincronização por município/UF não é suportada por esse endpoint."
+            )
+
         total = 0
         municipio = self._obter_ou_criar_municipio(codigo_ibge, municipio_nome, estado_uf)
 
         client = TransparenciaClient()
         try:
-            for schema in client.contratos(codigo_ibge=codigo_ibge, paginas=paginas):
+            for schema in client.contratos(codigo_orgao=codigo_orgao, paginas=paginas):
                 try:
                     self._salvar_contrato_transparencia(schema, municipio)
                     total += 1
@@ -97,7 +105,7 @@ class IngestaoAPIService:
         cnpj_orgao: str,
         municipio_nome: str = "",
         estado_uf: str = "BR",
-        codigo_ibge: str = "0000000",
+        codigo_ibge: str = "",
         paginas: int | None = None,
         data_inicio: str = "",
         data_fim: str = "",
@@ -126,6 +134,74 @@ class IngestaoAPIService:
             client.close()
 
         logger.info("Ingestão PNCP concluída: %d contratos para CNPJ %s.", total, cnpj_orgao)
+        return total
+
+    def ingerir_contratos_pncp_por_municipio(
+        self,
+        *,
+        municipio_nome: str,
+        estado_uf: str,
+        codigo_ibge: str = "",
+        paginas: int | None = 1,
+        data_inicio: str = "",
+        data_fim: str = "",
+    ) -> int:
+        """Busca contratos no PNCP por intervalo e filtra pelo município do órgão."""
+        total = 0
+        municipio = self._obter_ou_criar_municipio(
+            codigo_ibge,
+            municipio_nome,
+            estado_uf,
+        )
+
+        ano_atual = date.today().year
+        data_inicio = data_inicio or f"{ano_atual}0101"
+        data_fim = data_fim or f"{ano_atual}1231"
+
+        client = PNCPClient()
+        try:
+            for schema in client.contratos_recentes(
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                paginas=paginas,
+            ):
+                unidade = schema.unidade_orgao
+                if not unidade:
+                    continue
+
+                codigo_match = (
+                    str(unidade.codigo_ibge) == municipio.codigo_ibge
+                    if unidade.codigo_ibge is not None
+                    else False
+                )
+                cidade_match = (
+                    unidade.municipio_nome.strip().lower() == municipio.nome.strip().lower()
+                    and unidade.uf_sigla.strip().upper() == municipio.estado
+                )
+
+                if not (codigo_match or cidade_match):
+                    continue
+
+                try:
+                    self._salvar_contrato_pncp(schema, municipio)
+                    total += 1
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(
+                        "Erro ao salvar contrato PNCP %s para %s/%s: %s",
+                        schema.numero_contrato,
+                        municipio.nome,
+                        municipio.estado,
+                        exc,
+                    )
+        finally:
+            client.close()
+
+        logger.info(
+            "Ingestão PNCP por município concluída: %d contratos para %s/%s.",
+            total,
+            municipio.nome,
+            municipio.estado,
+        )
         return total
 
     def _salvar_contrato_pncp(
@@ -171,9 +247,68 @@ class IngestaoAPIService:
         nome: str,
         estado: str,
     ) -> Municipio:
+        codigo_ibge, nome, estado = self._resolver_identidade_municipio(
+            codigo_ibge=codigo_ibge,
+            nome=nome,
+            estado=estado,
+        )
         return MunicipioService.obter_ou_criar(
             nome=nome or f"Município IBGE {codigo_ibge}",
             estado=estado[:2] if estado else "BR",
             codigo_ibge=codigo_ibge,
             populacao=_FALLBACK_POPULACAO,
         )
+
+    def _resolver_identidade_municipio(
+        self,
+        *,
+        codigo_ibge: str,
+        nome: str,
+        estado: str,
+    ) -> tuple[str, str, str]:
+        codigo_ibge = (codigo_ibge or "").strip()
+        nome = (nome or "").strip()
+        estado = (estado or "").strip().upper()
+
+        if codigo_ibge:
+            municipio = Municipio.objects.filter(codigo_ibge=codigo_ibge).first()
+            if municipio:
+                return (
+                    codigo_ibge,
+                    nome or municipio.nome,
+                    estado or municipio.estado,
+                )
+            return (
+                codigo_ibge,
+                nome or f"Município IBGE {codigo_ibge}",
+                estado or "BR",
+            )
+
+        if not nome or not estado:
+            raise ValueError(
+                "Informe o código IBGE ou um par válido de município e UF."
+            )
+        if estado == "BR":
+            raise ValueError(
+                "Informe uma UF válida de 2 letras para resolver o município pelo IBGE."
+            )
+
+        client = IBGEClient()
+        try:
+            item = client.buscar_municipio_por_nome(nome=nome, uf=estado)
+        finally:
+            client.close()
+
+        if not item:
+            raise ValueError(
+                f"Município '{nome}/{estado}' não encontrado na API de localidades do IBGE."
+            )
+
+        codigo = str(item.get("id", "")).strip()
+        nome_oficial = str(item.get("nome", nome)).strip() or nome
+        if not codigo:
+            raise ValueError(
+                f"A API do IBGE não retornou um código válido para '{nome}/{estado}'."
+            )
+
+        return codigo, nome_oficial, estado

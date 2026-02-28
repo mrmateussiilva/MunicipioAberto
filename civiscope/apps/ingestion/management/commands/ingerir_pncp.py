@@ -27,7 +27,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--municipio-ibge",
-            default="0000000",
+            default="",
             help="Código IBGE do município relacionado ao órgão.",
         )
         parser.add_argument(
@@ -65,6 +65,11 @@ class Command(BaseCommand):
         paginas: int | None = options["paginas"]
         data_inicio: str = options["data_inicio"]
         data_fim: str = options["data_fim"]
+
+        if not municipio_ibge and not (municipio_nome and estado and estado != "BR"):
+            raise CommandError(
+                "Informe --municipio-ibge ou o par --municipio-nome e --estado."
+            )
 
         self.stdout.write(
             self.style.MIGRATE_HEADING(

@@ -38,6 +38,14 @@ def _make_pncp_schema(**overrides) -> PNCPContratoSchema:
         dataAssinatura="2024-02-01",
         nomeRazaoSocialFornecedor="TI Corp SA",
         niFornecedor="98765432000111",
+        unidadeOrgao={
+            "codigoUnidade": "26246",
+            "nomeUnidade": "Campus Colatina",
+            "codigoIbge": 3201506,
+            "municipioNome": "Colatina",
+            "ufSigla": "ES",
+            "ufNome": "Espirito Santo",
+        },
     )
     defaults.update(overrides)
     return PNCPContratoSchema.model_validate(defaults)
@@ -74,6 +82,7 @@ class TestIngestaoAPIService:
             mock_cont.criar.return_value = MagicMock()
 
             total = service.ingerir_contratos_transparencia(
+                codigo_orgao="26246",
                 codigo_ibge="3550308",
                 municipio_nome="São Paulo",
                 estado_uf="SP",
@@ -110,6 +119,38 @@ class TestIngestaoAPIService:
         assert total == 1
         mock_cont.criar.assert_called_once()
 
+    @patch("apps.ingestion.api_service.PNCPClient")
+    def test_ingerir_contratos_pncp_por_municipio(self, MockClient):
+        from apps.ingestion.api_service import IngestaoAPIService
+
+        schema = _make_pncp_schema()
+        mock_client = MagicMock()
+        mock_client.contratos_recentes.return_value = iter([schema])
+
+        service = IngestaoAPIService()
+
+        with patch.object(service, "_obter_ou_criar_municipio") as mock_mun, \
+             patch("apps.ingestion.api_service.PNCPClient", return_value=mock_client), \
+             patch("apps.ingestion.api_service.EmpresaService") as mock_emp, \
+             patch("apps.ingestion.api_service.ContratoService") as mock_cont:
+
+            mock_municipio = MagicMock()
+            mock_municipio.codigo_ibge = "3201506"
+            mock_municipio.nome = "Colatina"
+            mock_municipio.estado = "ES"
+            mock_mun.return_value = mock_municipio
+            mock_emp.obter_ou_criar.return_value = MagicMock()
+            mock_cont.criar.return_value = MagicMock()
+
+            total = service.ingerir_contratos_pncp_por_municipio(
+                municipio_nome="Colatina",
+                estado_uf="ES",
+                paginas=1,
+            )
+
+        assert total == 1
+        mock_cont.criar.assert_called_once()
+
     def test_schema_transparencia_date_handling(self):
         schema = _make_transparencia_schema(dataAssinatura=None, dataPublicacaoDou=None)
         assert schema.data_assinatura_date is None
@@ -122,3 +163,26 @@ class TestIngestaoAPIService:
     def test_schema_transparencia_decimal_coercion(self):
         schema = _make_transparencia_schema(valorInicial=None)
         assert schema.valor_inicial == Decimal("0")
+
+    @patch("apps.ingestion.api_service.IBGEClient")
+    def test_resolve_codigo_ibge_from_city_and_state(self, MockIBGEClient):
+        from apps.ingestion.api_service import IngestaoAPIService
+
+        mock_client = MockIBGEClient.return_value
+        mock_client.buscar_municipio_por_nome.return_value = {
+            "id": 3201506,
+            "nome": "Colatina",
+        }
+
+        service = IngestaoAPIService()
+
+        codigo_ibge, nome, estado = service._resolver_identidade_municipio(
+            codigo_ibge="",
+            nome="colatina",
+            estado="es",
+        )
+
+        assert codigo_ibge == "3201506"
+        assert nome == "Colatina"
+        assert estado == "ES"
+        mock_client.close.assert_called_once()
