@@ -80,6 +80,9 @@ class BaseAPIClient:
             response = self._client.get(url, params=params)
             response.raise_for_status()
             logger.debug("Response %s bytes=%d", response.status_code, len(response.content))
+            # Handle 204 No Content or empty body gracefully
+            if response.status_code == 204 or not response.content or not response.content.strip():
+                return []
             return response.json()
         except httpx.HTTPStatusError as exc:
             logger.warning(
@@ -126,7 +129,15 @@ class BaseAPIClient:
                 break
 
             params[page_param] = page
-            data = self._get(path, params=params)
+
+            try:
+                data = self._get(path, params=params)
+            except APIError as exc:
+                # PNCP returns 400 "Página X inexistente" when page is out of range
+                if exc.status_code == 400:
+                    logger.debug("Page %d returned 400 — stopping pagination.", page)
+                    break
+                raise
 
             # Unwrap data from a known key, or assume the whole response is a list
             if data_key and isinstance(data, dict):

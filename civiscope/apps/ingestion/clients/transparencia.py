@@ -16,7 +16,11 @@ from typing import Any, Iterator
 from pydantic import ValidationError
 
 from .base import APIError, BaseAPIClient
-from .schemas import TransparenciaContratoSchema, TransparenciaLicitacaoSchema
+from .schemas import (
+    TransparenciaContratoSchema,
+    TransparenciaLicitacaoSchema,
+    TransparenciaOrgaoSchema,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +28,6 @@ _BASE_URL = os.getenv(
     "TRANSPARENCIA_BASE_URL",
     "https://api.portaldatransparencia.gov.br/api-de-dados",
 )
-_API_KEY = os.getenv("TRANSPARENCIA_API_KEY", "")
 
 
 class TransparenciaClient(BaseAPIClient):
@@ -39,13 +42,12 @@ class TransparenciaClient(BaseAPIClient):
     """
 
     base_url = _BASE_URL
-    default_headers = {"chave-api-dados": _API_KEY}
 
     def __init__(self, api_key: str | None = None) -> None:
-        if api_key:
-            self.default_headers = {"chave-api-dados": api_key}
+        resolved_key = api_key or os.getenv("TRANSPARENCIA_API_KEY", "")
+        self.default_headers = {"chave-api-dados": resolved_key}
         super().__init__()
-        if not _API_KEY and not api_key:
+        if not resolved_key:
             logger.warning(
                 "TRANSPARENCIA_API_KEY não configurada. "
                 "Obtenha em: https://portaldatransparencia.gov.br/api-de-dados/cadastrar-email"
@@ -131,3 +133,32 @@ class TransparenciaClient(BaseAPIClient):
             max_pages=paginas,
             extra_params=extra,
         )
+
+    # ── Órgãos ──────────────────────────────────────────────────────────────
+
+    def orgaos_por_municipio(
+        self,
+        codigo_ibge: str,
+        paginas: int | None = 2,
+    ) -> list[TransparenciaOrgaoSchema]:
+        """Busca órgãos SIAFI sediados em um município (pelo código IBGE).
+
+        Retorna lista de órgãos cujos contratos podem ser consultados
+        via ``contratos(codigo_orgao=...)``.
+        """
+        orgaos: list[TransparenciaOrgaoSchema] = []
+
+        for item in self.paginate(
+            "/orgaos-siafi",
+            page_param="pagina",
+            size_param="tamanhoPagina",
+            page_size=100,
+            max_pages=paginas,
+            extra_params={"codigoIbge": codigo_ibge},
+        ):
+            try:
+                orgaos.append(TransparenciaOrgaoSchema.model_validate(item))
+            except ValidationError as exc:
+                logger.warning("Órgão inválido ignorado: %s", exc)
+
+        return orgaos
