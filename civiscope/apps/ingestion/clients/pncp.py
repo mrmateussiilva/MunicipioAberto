@@ -132,3 +132,79 @@ class PNCPClient(BaseAPIClient):
                 yield PNCPContratoSchema.model_validate(item)
             except ValidationError as exc:
                 logger.warning("Contrato PNCP inválido ignorado: %s", exc)
+
+    # ── Contratações por Município ───────────────────────────────────────────
+
+    def contratacoes_por_municipio(
+        self,
+        codigo_ibge: str,
+        uf: str,
+        data_inicio: str = "",
+        data_fim: str = "",
+        paginas: int | None = 5,
+        tamanho_pagina: int = 50,
+    ) -> list[dict]:
+        """Busca contratações (licitações) publicadas para um município pelo IBGE.
+
+        Usa o endpoint ``/contratacoes/publicacao`` que aceita
+        ``codigoMunicipioIbge`` e ``uf`` como filtros nativos.
+        Itera sobre as modalidades mais comuns para capturar tudo.
+
+        Retorna lista de dicts com ``cnpj`` (do órgão) e ``objetoCompra``.
+        """
+        import datetime
+
+        ano_atual = datetime.date.today().year
+        data_inicio = data_inicio or f"{ano_atual}0101"
+        data_fim = data_fim or f"{ano_atual}1231"
+
+        # Modalidades de contratação mais comuns (IDs do PNCP):
+        # 1=Leilão, 2=Diálogo, 3=Concurso, 4=Concorrência,
+        # 5=Pregão, 6=Dispensa, 7=Inexigibilidade, 8=Pré-qualificação
+        modalidades = [4, 5, 6, 7, 8]
+
+        cnpjs_vistos: set[str] = set()
+        resultados: list[dict] = []
+
+        for modalidade in modalidades:
+            extra: dict = {
+                "dataInicial": data_inicio,
+                "dataFinal": data_fim,
+                "codigoModalidadeContratacao": modalidade,
+                "codigoMunicipioIbge": codigo_ibge,
+                "uf": uf.upper(),
+            }
+
+            try:
+                for item in self.paginate(
+                    "/contratacoes/publicacao",
+                    page_param="pagina",
+                    size_param="tamanhoPagina",
+                    page_size=tamanho_pagina,
+                    data_key="data",
+                    max_pages=paginas,
+                    extra_params=extra,
+                ):
+                    orgao = item.get("orgaoEntidade") or {}
+                    cnpj = orgao.get("cnpj", "")
+                    if cnpj and cnpj not in cnpjs_vistos:
+                        cnpjs_vistos.add(cnpj)
+                        resultados.append({
+                            "cnpj": cnpj,
+                            "razaoSocial": orgao.get("razaoSocial", ""),
+                        })
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "Modalidade %d sem resultados para IBGE %s: %s",
+                    modalidade,
+                    codigo_ibge,
+                    exc,
+                )
+
+        logger.info(
+            "%d órgão(s) encontrado(s) no PNCP para IBGE %s/%s.",
+            len(resultados),
+            codigo_ibge,
+            uf,
+        )
+        return resultados

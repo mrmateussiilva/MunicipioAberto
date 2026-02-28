@@ -239,6 +239,138 @@ class IngestaoAPIService:
             numero_processo=numero[:100],
         )
 
+    # ── Ingestão Unificada ────────────────────────────────────────────────────
+
+    def ingerir_tudo_por_municipio(
+        self,
+        municipio_nome: str,
+        estado_uf: str,
+        codigo_ibge: str = "",
+        paginas: int | None = 1,
+        data_inicio: str = "",
+        data_fim: str = "",
+    ) -> dict[str, int]:
+        """Ingere dados de TODAS as fontes para um município.
+
+        Resolve automaticamente o código IBGE (se não fornecido) e coleta
+        contratos do PNCP e do Portal da Transparência.
+
+        Returns:
+            Dict com totais por fonte, ex: ``{"pncp": 15, "transparencia": 42}``.
+        """
+        resultados: dict[str, int] = {"pncp": 0, "transparencia": 0}
+
+        # 1. Resolver identidade do município
+        codigo_ibge, nome_oficial, estado = self._resolver_identidade_municipio(
+            codigo_ibge=codigo_ibge,
+            nome=municipio_nome,
+            estado=estado_uf,
+        )
+        municipio = self._obter_ou_criar_municipio(codigo_ibge, nome_oficial, estado)
+
+        logger.info(
+            "Ingestão unificada iniciada para %s/%s (IBGE: %s).",
+            municipio.nome,
+            municipio.estado,
+            municipio.codigo_ibge,
+        )
+
+        # 2. PNCP — descobrir órgãos no município e buscar contratos
+        try:
+            pncp_client = PNCPClient()
+            try:
+                orgaos_pncp = pncp_client.contratacoes_por_municipio(
+                    codigo_ibge=municipio.codigo_ibge,
+                    uf=municipio.estado,
+                    data_inicio=data_inicio,
+                    data_fim=data_fim,
+                    paginas=paginas,
+                )
+            finally:
+                pncp_client.close()
+
+            logger.info(
+                "%d órgão(s) com contratações no PNCP para %s/%s.",
+                len(orgaos_pncp),
+                municipio.nome,
+                municipio.estado,
+            )
+
+            for orgao_info in orgaos_pncp:
+                cnpj = orgao_info.get("cnpj", "")
+                if not cnpj:
+                    continue
+                try:
+                    total = self.ingerir_contratos_pncp(
+                        cnpj_orgao=cnpj,
+                        municipio_nome=municipio.nome,
+                        estado_uf=municipio.estado,
+                        codigo_ibge=municipio.codigo_ibge,
+                        paginas=paginas,
+                        data_inicio=data_inicio,
+                        data_fim=data_fim,
+                    )
+                    resultados["pncp"] += total
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(
+                        "Erro ao ingerir contratos PNCP do órgão %s: %s",
+                        cnpj,
+                        exc,
+                    )
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Erro na ingestão PNCP para %s/%s: %s", municipio.nome, municipio.estado, exc)
+
+        # 3. Transparência — descobrir órgãos e buscar contratos
+        try:
+            client = TransparenciaClient()
+            try:
+                orgaos = client.orgaos_por_municipio(municipio.codigo_ibge)
+            finally:
+                client.close()
+
+            logger.info(
+                "%d órgão(s) encontrado(s) na Transparência para %s/%s.",
+                len(orgaos),
+                municipio.nome,
+                municipio.estado,
+            )
+
+            for orgao in orgaos:
+                if not orgao.codigo:
+                    continue
+                try:
+                    total = self.ingerir_contratos_transparencia(
+                        codigo_orgao=orgao.codigo,
+                        codigo_ibge=municipio.codigo_ibge,
+                        municipio_nome=municipio.nome,
+                        estado_uf=municipio.estado,
+                        paginas=paginas,
+                    )
+                    resultados["transparencia"] += total
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(
+                        "Erro ao ingerir órgão %s (%s) da Transparência: %s",
+                        orgao.codigo,
+                        orgao.descricao,
+                        exc,
+                    )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "Erro ao buscar órgãos na Transparência para %s/%s: %s",
+                municipio.nome,
+                municipio.estado,
+                exc,
+            )
+
+        logger.info(
+            "Ingestão unificada concluída para %s/%s: PNCP=%d, Transparência=%d.",
+            municipio.nome,
+            municipio.estado,
+            resultados["pncp"],
+            resultados["transparencia"],
+        )
+        return resultados
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _obter_ou_criar_municipio(

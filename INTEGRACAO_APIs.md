@@ -150,6 +150,57 @@ apps/ingestion/
 
 ---
 
+## Ingestão Unificada por Cidade e Estado
+
+O comando `ingerir_municipio` é a forma mais simples de coletar dados públicos. Ele resolve automaticamente o código IBGE da cidade e busca contratos em **todas as fontes disponíveis** (PNCP + Portal da Transparência).
+
+### Uso básico
+
+```bash
+# Apenas cidade e UF — resolve tudo automaticamente:
+python manage.py ingerir_municipio --cidade "Colatina" --estado ES
+
+# Com mais páginas e período específico:
+python manage.py ingerir_municipio --cidade "São Paulo" --estado SP \
+    --paginas 3 --data-inicio 20240101 --data-fim 20241231
+```
+
+### Argumentos
+
+| Argumento | Obrigatório | Descrição |
+|-----------|-------------|-----------|
+| `--cidade` | ✅ | Nome da cidade |
+| `--estado` | ✅ | UF (2 letras, ex: SP, ES, RJ) |
+| `--codigo-ibge` | ❌ | Código IBGE (resolve automaticamente se omitido) |
+| `--paginas` | ❌ | Máx. de páginas por fonte (padrão: 1) |
+| `--data-inicio` | ❌ | Data inicial YYYYMMDD (padrão: 01/01 do ano atual) |
+| `--data-fim` | ❌ | Data final YYYYMMDD (padrão: 31/12 do ano atual) |
+
+### O que acontece internamente
+
+1. Resolve o nome da cidade + UF para código IBGE via API do IBGE
+2. Busca contratos no PNCP filtrando pelo município
+3. Descobre órgãos federais no município via Portal da Transparência
+4. Para cada órgão encontrado, busca contratos na Transparência
+5. Salva tudo no banco de dados e exibe um resumo
+
+### Via Python / Django Shell
+
+```python
+from apps.ingestion.api_service import IngestaoAPIService
+
+service = IngestaoAPIService()
+resultados = service.ingerir_tudo_por_municipio(
+    municipio_nome="Colatina",
+    estado_uf="ES",
+    paginas=2,
+)
+print(f"PNCP: {resultados['pncp']} contratos")
+print(f"Transparência: {resultados['transparencia']} contratos")
+```
+
+---
+
 ## Rodando os Testes
 
 ```bash

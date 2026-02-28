@@ -92,6 +92,17 @@ class TransparenciaLicitacaoSchema(BaseModel):
             return Decimal("0")
 
 
+class TransparenciaOrgaoSchema(BaseModel):
+    """Órgão retornado pela API de órgãos SIAFI do Portal da Transparência."""
+
+    codigo: str = Field(default="", alias="codigo")
+    descricao: str = Field(default="", alias="descricao")
+    codigo_siafi: str = Field(default="", alias="codigoSIAFI")
+    sigla: str = Field(default="")
+
+    model_config = {"populate_by_name": True}
+
+
 # ──────────────────────────── PNCP / OCDS ───────────────────────────────────
 
 class PNCPItemSchema(BaseModel):

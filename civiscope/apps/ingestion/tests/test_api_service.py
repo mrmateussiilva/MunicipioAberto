@@ -186,3 +186,97 @@ class TestIngestaoAPIService:
         assert nome == "Colatina"
         assert estado == "ES"
         mock_client.close.assert_called_once()
+
+    @patch("apps.ingestion.api_service.TransparenciaClient")
+    @patch("apps.ingestion.api_service.PNCPClient")
+    def test_ingerir_tudo_por_municipio_happy_path(self, MockPNCP, MockTransparencia):
+        from apps.ingestion.api_service import IngestaoAPIService
+        from apps.ingestion.clients.schemas import TransparenciaOrgaoSchema
+
+        # Setup PNCP mock
+        pncp_schema = _make_pncp_schema()
+        mock_pncp_client = MagicMock()
+        mock_pncp_client.contratos_recentes.return_value = iter([pncp_schema])
+        MockPNCP.return_value = mock_pncp_client
+
+        # Setup Transparência mock
+        orgao = TransparenciaOrgaoSchema(codigo="26246", descricao="IFES", codigo_siafi="26246")
+        transparencia_schema = _make_transparencia_schema()
+        mock_transp_client = MagicMock()
+        mock_transp_client.orgaos_por_municipio.return_value = [orgao]
+        mock_transp_client.contratos.return_value = iter([transparencia_schema])
+        MockTransparencia.return_value = mock_transp_client
+
+        service = IngestaoAPIService()
+
+        with patch.object(service, "_resolver_identidade_municipio") as mock_res, \
+             patch.object(service, "_obter_ou_criar_municipio") as mock_mun, \
+             patch("apps.ingestion.api_service.EmpresaService") as mock_emp, \
+             patch("apps.ingestion.api_service.ContratoService") as mock_cont:
+
+            mock_res.return_value = ("3201506", "Colatina", "ES")
+            mock_municipio = MagicMock()
+            mock_municipio.nome = "Colatina"
+            mock_municipio.estado = "ES"
+            mock_municipio.codigo_ibge = "3201506"
+            mock_mun.return_value = mock_municipio
+            mock_emp.obter_ou_criar.return_value = MagicMock()
+            mock_cont.criar.return_value = MagicMock()
+
+            resultados = service.ingerir_tudo_por_municipio(
+                municipio_nome="Colatina",
+                estado_uf="ES",
+                paginas=1,
+            )
+
+        assert resultados["pncp"] >= 0
+        assert resultados["transparencia"] >= 0
+        assert resultados["pncp"] + resultados["transparencia"] > 0
+
+    @patch("apps.ingestion.api_service.TransparenciaClient")
+    @patch("apps.ingestion.api_service.PNCPClient")
+    def test_ingerir_tudo_sem_orgaos_transparencia(self, MockPNCP, MockTransparencia):
+        from apps.ingestion.api_service import IngestaoAPIService
+
+        mock_pncp_client = MagicMock()
+        mock_pncp_client.contratos_recentes.return_value = iter([])
+        MockPNCP.return_value = mock_pncp_client
+
+        mock_transp_client = MagicMock()
+        mock_transp_client.orgaos_por_municipio.return_value = []
+        MockTransparencia.return_value = mock_transp_client
+
+        service = IngestaoAPIService()
+
+        with patch.object(service, "_resolver_identidade_municipio") as mock_res, \
+             patch.object(service, "_obter_ou_criar_municipio") as mock_mun:
+
+            mock_res.return_value = ("9999999", "Cidade Teste", "XX")
+            mock_municipio = MagicMock()
+            mock_municipio.nome = "Cidade Teste"
+            mock_municipio.estado = "XX"
+            mock_municipio.codigo_ibge = "9999999"
+            mock_mun.return_value = mock_municipio
+
+            resultados = service.ingerir_tudo_por_municipio(
+                municipio_nome="Cidade Teste",
+                estado_uf="XX",
+                paginas=1,
+            )
+
+        assert resultados["transparencia"] == 0
+
+    def test_ingerir_tudo_ibge_nao_encontrado(self):
+        from apps.ingestion.api_service import IngestaoAPIService
+
+        service = IngestaoAPIService()
+
+        with patch.object(service, "_resolver_identidade_municipio") as mock_res:
+            mock_res.side_effect = ValueError("Município não encontrado")
+
+            with pytest.raises(ValueError, match="não encontrado"):
+                service.ingerir_tudo_por_municipio(
+                    municipio_nome="CidadeInexistente",
+                    estado_uf="ZZ",
+                )
+

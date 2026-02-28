@@ -114,3 +114,32 @@ class TestTransparenciaClient:
         assert len(licitacoes) == 1
         assert licitacoes[0].numero == "LIC-2024-001"
         assert float(licitacoes[0].valor_estimado) == 120000.00
+
+    def test_orgaos_por_municipio_returns_schemas(self):
+        orgao_fixture = {
+            "codigo": "26246",
+            "descricao": "Instituto Federal do Espírito Santo",
+            "codigoSIAFI": "26246",
+            "sigla": "IFES",
+        }
+        client = TransparenciaClient(api_key="test-key")
+        client._client = httpx.Client(
+            base_url=client.base_url,
+            transport=_make_transport([[orgao_fixture], []]),
+        )
+
+        orgaos = client.orgaos_por_municipio("3201506")
+        assert len(orgaos) == 1
+        assert orgaos[0].codigo == "26246"
+        assert orgaos[0].descricao == "Instituto Federal do Espírito Santo"
+
+    def test_orgaos_por_municipio_empty(self):
+        client = TransparenciaClient(api_key="test-key")
+        client._client = httpx.Client(
+            base_url=client.base_url,
+            transport=_make_transport([[]]),
+        )
+
+        orgaos = client.orgaos_por_municipio("0000000")
+        assert orgaos == []
+
