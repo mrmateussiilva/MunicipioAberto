@@ -37,13 +37,6 @@ def busca(request):
             m.total_contratos_valor or 0 for m in municipios
         )
 
-    # Lista de estados únicos para o filtro
-    estados = (
-        Municipio.objects.values_list("estado", flat=True)
-        .distinct()
-        .order_by("estado")
-    )
-
     return render(
         request,
         "municipios/busca.html",
@@ -51,11 +44,29 @@ def busca(request):
             "municipios": municipios,
             "query": query,
             "estado_filter": estado_filter,
-            "estados": estados,
             "total_contratos": total_contratos,
             "total_valor": total_valor,
         },
     )
+
+
+def autocomplete_cidades(request):
+    """Retorna JSON com sugestões de cidades para o autocomplete."""
+    from django.http import JsonResponse
+
+    query = request.GET.get("q", "").strip()
+    if len(query) < 2:
+        return JsonResponse([], safe=False)
+
+    qs = Municipio.objects.filter(
+        Q(nome__icontains=query) | Q(estado__icontains=query)
+    ).order_by("nome")[:10]
+
+    results = [
+        {"nome": m.nome, "estado": m.estado, "codigo_ibge": m.codigo_ibge}
+        for m in qs
+    ]
+    return JsonResponse(results, safe=False)
 
 
 def detalhe_municipio(request, codigo_ibge):

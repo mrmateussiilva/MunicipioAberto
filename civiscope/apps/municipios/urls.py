@@ -10,5 +10,6 @@ app_name = "municipios"
 
 urlpatterns = [
     path("", views.busca, name="busca"),
+    path("autocomplete/", views.autocomplete_cidades, name="autocomplete"),
     path("<str:codigo_ibge>/", views.detalhe_municipio, name="detalhe"),
 ]
