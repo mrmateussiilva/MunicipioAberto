@@ -8,12 +8,13 @@ from decimal import Decimal
 
 from apps.contratos.services import ContratoService
 from apps.empresas.services import EmpresaService
-from apps.municipios.models import Municipio
+from apps.municipios.models import Municipio, Vereador
 from apps.municipios.services import MunicipioService
 
 from .clients.ibge import IBGEClient
 from .clients.pncp import PNCPClient
 from .clients.schemas import PNCPContratoSchema, TransparenciaContratoSchema
+from .clients.tse import TSEClient
 from .clients.transparencia import TransparenciaClient
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,40 @@ class IngestaoAPIService:
             fonte_dados=schema.url_documento or "https://portaldatransparencia.gov.br",
             numero_processo=numero[:100],
         )
+
+    # ── TSE ──────────────────────────────────────────────────────────────────
+
+    def ingerir_vereadores(self, municipio: Municipio, ano: int = 2024) -> int:
+        """
+        Busca vereadores eleitos no TSE e salva/atualiza no banco.
+        """
+        client = TSEClient()
+        total = 0
+        try:
+            eleicao_id = client.get_eleicao_id(ano)
+            tse_code = client.buscar_municipio_tse_code(eleicao_id, municipio.estado, municipio.nome)
+            candidatos_schemas = client.get_candidatos_com_detalhes(ano, tse_code, eleicao_id)
+
+            for schema in candidatos_schemas:
+                Vereador.objects.update_or_create(
+                    municipio=municipio,
+                    nome_completo=schema.nome_completo,
+                    ano_eleicao=ano,
+                    defaults={
+                        "nome_urna": schema.nome_urna,
+                        "partido_sigla": schema.partido.sigla,
+                        "partido_numero": schema.partido.numero,
+                        "status_eleicao": schema.descricao_totalizacao,
+                        "is_reeleito": schema.st_reeleicao,
+                        "coligacao": getattr(schema, 'nome_coligacao', schema.partido.sigla),
+                    },
+                )
+                total += 1
+        finally:
+            client.close()
+
+        logger.info("Ingestão TSE concluída: %d vereadores para %s/%s.", total, municipio.nome, municipio.estado)
+        return total
 
     # ── PNCP ─────────────────────────────────────────────────────────────────
 
@@ -256,9 +291,9 @@ class IngestaoAPIService:
         contratos do PNCP e do Portal da Transparência.
 
         Returns:
-            Dict com totais por fonte, ex: ``{"pncp": 15, "transparencia": 42}``.
+            Dict com totais por fonte, ex: ``{"pncp": 15, "transparencia": 42, "tse": 11}``.
         """
-        resultados: dict[str, int] = {"pncp": 0, "transparencia": 0}
+        resultados: dict[str, int] = {"pncp": 0, "transparencia": 0, "tse": 0}
 
         # 1. Resolver identidade do município
         codigo_ibge, nome_oficial, estado = self._resolver_identidade_municipio(
@@ -275,7 +310,14 @@ class IngestaoAPIService:
             municipio.codigo_ibge,
         )
 
-        # 2. PNCP — descobrir órgãos no município e buscar contratos
+        # 2. Vereadores (TSE)
+        try:
+            total_tse = self.ingerir_vereadores(municipio)
+            resultados["tse"] = total_tse
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Erro na ingestão TSE para %s/%s: %s", municipio.nome, municipio.estado, exc)
+
+        # 3. PNCP — descobrir órgãos no município e buscar contratos
         try:
             pncp_client = PNCPClient()
             try:

@@ -189,3 +189,50 @@ class DadosAbertosDatasetSchema(BaseModel):
     resources: list[DadosAbertosRecursoSchema] = Field(default_factory=list)
 
     model_config = {"populate_by_name": True}
+
+
+# ──────────────────────────── TSE DivulgaCandContas ─────────────────────────
+
+class TSEPartidoSchema(BaseModel):
+    """Partido político na API do TSE."""
+    numero: int = 0
+    sigla: str = ""
+    nome: str | None = None
+
+class TSECargoSchema(BaseModel):
+    """Cargo na API do TSE."""
+    codigo: int
+    nome: str
+
+class TSECandidatoSchema(BaseModel):
+    """Candidato retornado pela API DivulgaCandContas do TSE."""
+
+    id: int
+    nome_urna: str = Field(alias="nomeUrna")
+    nome_completo: str = Field(alias="nomeCompleto")
+    numero: int
+    
+    # Sexo, raça, etc são úteis para análises futuras
+    descricao_sexo: str | None = Field(default=None, alias="descricaoSexo")
+    descricao_cor_raca: str | None = Field(default=None, alias="descricaoCorRaca")
+    
+    # Status da candidatura
+    descricao_situacao: str = Field(alias="descricaoSituacao")  # Ex: Deferido
+    is_apto: bool | None = Field(default=None, alias="candidatoApto")
+    
+    # Resultado da eleição (Campo CHAVE para saber quem ganhou)
+    # Valores comuns: "Eleito por QP", "Eleito por média", "Suplente", "Não eleito"
+    descricao_totalizacao: str = Field(alias="descricaoTotalizacao")
+    
+    partido: TSEPartidoSchema
+    cargo: TSECargoSchema
+    
+    st_reeleicao: bool = Field(default=False, alias="st_REELEICAO")
+
+    model_config = {"populate_by_name": True}
+
+    @property
+    def is_eleito(self) -> bool:
+        """Retorna True se o candidato foi eleito (por média ou QP)."""
+        return "eleito" in self.descricao_totalizacao.lower()
+
