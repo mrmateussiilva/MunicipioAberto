@@ -1,0 +1,436 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CivisScope — Busca por Município ou Estado</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3250;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --accent-dim: rgba(99,102,241,.15);
+      --green: #22c55e;
+      --yellow: #eab308;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #0f1117 0%, #1a1d27 50%, #1e1f3a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 24px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% -10%, rgba(99,102,241,.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(99,102,241,.4);
+      color: var(--accent-hover);
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -.02em;
+      background: linear-gradient(135deg, #e2e8f0 30%, var(--accent-hover));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 520px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+
+    /* ── Search form ── */
+    .search-wrap {
+      max-width: 700px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .search-row {
+      display: flex;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 6px 6px 16px;
+      align-items: center;
+      transition: border-color .2s;
+    }
+    .search-row:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.2);
+    }
+    .search-icon {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .search-row input[name="q"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    .search-row input[name="q"]::placeholder { color: var(--muted); }
+    .search-row select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .875rem;
+      font-family: inherit;
+      padding: 8px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+    .search-row select:focus { border-color: var(--accent); }
+    .btn-search {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      white-space: nowrap;
+    }
+    .btn-search:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-search:active { transform: translateY(0); }
+
+    /* ── Main content ── */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-size: .875rem;
+    }
+    .stat-pill strong { color: var(--accent-hover); }
+
+    /* ── Result heading ── */
+    .result-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .result-header h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .result-header span { color: var(--muted); font-size: .875rem; }
+
+    /* ── Cards grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0,0,0,.4);
+    }
+    .card:hover::before { opacity: 1; }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 8px;
+    }
+    .city-name {
+      font-weight: 700;
+      font-size: 1.05rem;
+      line-height: 1.3;
+    }
+    .estado-badge {
+      flex-shrink: 0;
+      background: var(--accent-dim);
+      color: var(--accent-hover);
+      border: 1px solid rgba(99,102,241,.3);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: .825rem;
+      color: var(--muted);
+    }
+    .meta-row span:last-child {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .meta-row .valor { color: var(--green); font-weight: 600; }
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 10px 0;
+    }
+    .card-footer {
+      font-size: .78rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card-footer svg { opacity: .5; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--muted);
+    }
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+    .empty h3 { color: var(--text); font-size: 1.2rem; margin-bottom: 8px; }
+    .empty p { font-size: .95rem; }
+
+    /* ── Initial state ── */
+    .initial {
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .initial-cards {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 32px;
+    }
+    .hint-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      font-size: .9rem;
+      color: var(--muted);
+      max-width: 200px;
+      text-align: center;
+    }
+    .hint-card .icon { font-size: 1.8rem; margin-bottom: 10px; }
+    .hint-card strong { display: block; color: var(--text); font-size: .95rem; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-badge">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+    Dados públicos municipais
+  </div>
+  <h1>CivisScope</h1>
+  <p>Pesquise contratos, empresas e indicadores por cidade ou estado.</p>
+
+  <form class="search-wrap" method="get" action="">
+    <div class="search-row">
+      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input
+        type="text"
+        name="q"
+        value="{{ query }}"
+        placeholder="Nome da cidade ou UF (ex: São Paulo, SP)"
+        autocomplete="off"
+      />
+      <select name="estado">
+        <option value="">Todos os estados</option>
+        {% for uf in estados %}
+          <option value="{{ uf }}" {% if estado_filter == uf %}selected{% endif %}>{{ uf }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn-search">Buscar</button>
+    </div>
+  </form>
+</header>
+
+<main class="container">
+
+  {% if query or estado_filter %}
+    {% if municipios %}
+      <div class="stats-bar">
+        <div class="stat-pill">
+          🏙️ <strong>{{ municipios|length }}</strong> município{{ municipios|length|pluralize }}
+        </div>
+        <div class="stat-pill">
+          📄 <strong>{{ total_contratos }}</strong> contrato{{ total_contratos|pluralize }}
+        </div>
+        {% if total_valor %}
+        <div class="stat-pill">
+          💰 <strong>R$ {% if total_valor %}{{ total_valor|floatformat:2|intcomma }}{% else %}—{% endif %}</strong> em contratos
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="result-header">
+        <h2>Resultados para "{% if query %}{{ query }}{% endif %}{% if query and estado_filter %} · {% endif %}{% if estado_filter %}{{ estado_filter }}{% endif %}"</h2>
+        <span>{{ municipios|length }} encontrado{{ municipios|length|pluralize }}</span>
+      </div>
+
+      <div class="grid">
+        {% for m in municipios %}
+        <a class="card" href="{% url 'municipios:detalhe' m.codigo_ibge %}">
+          <div class="card-head">
+            <div class="city-name">{{ m.nome }}</div>
+            <div class="estado-badge">{{ m.estado }}</div>
+          </div>
+          <div class="card-meta">
+            <div class="meta-row">
+              <span>👥 População</span>
+              <span>{{ m.populacao|intcomma }}</span>
+            </div>
+            <div class="meta-row">
+              <span>📄 Contratos</span>
+              <span>{{ m.num_contratos }}</span>
+            </div>
+            {% if m.total_contratos_valor %}
+            <div class="divider"></div>
+            <div class="meta-row">
+              <span>Total contratado</span>
+              <span class="valor">R$ {{ m.total_contratos_valor|floatformat:2|intcomma }}</span>
+            </div>
+            {% endif %}
+          </div>
+          <div class="divider"></div>
+          <div class="card-footer">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            IBGE {{ m.codigo_ibge }}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">🔍</div>
+        <h3>Nenhum município encontrado</h3>
+        <p>Tente buscar por outro nome ou UF.</p>
+      </div>
+    {% endif %}
+
+  {% else %}
+    <div class="initial">
+      <p style="color: var(--muted); font-size: 1rem;">Use a busca acima para encontrar municípios e seus contratos públicos.</p>
+      <div class="initial-cards">
+        <div class="hint-card">
+          <div class="icon">🏙️</div>
+          <strong>Por cidade</strong>
+          Digite o nome do município
+        </div>
+        <div class="hint-card">
+          <div class="icon">🗺️</div>
+          <strong>Por estado</strong>
+          Digite a UF (ex: SP, MG, RJ)
+        </div>
+        <div class="hint-card">
+          <div class="icon">📊</div>
+          <strong>Contratos</strong>
+          Veja valores e empresas contratadas
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+</main>
+
+</body>
+</html>

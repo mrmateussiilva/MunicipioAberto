@@ -1,0 +1,338 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ municipio }} — CivisScope</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #22263a;
+            --border: #2e3250;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-dim: rgba(99, 102, 241, .15);
+            --green: #22c55e;
+            --red: #ef4444;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --radius: 12px;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted);
+            text-decoration: none;
+            font-size: .875rem;
+            font-weight: 500;
+            transition: color .2s;
+        }
+
+        .back-link:hover {
+            color: var(--text);
+        }
+
+        .topbar-brand {
+            margin-left: auto;
+            font-weight: 800;
+            font-size: .95rem;
+            background: linear-gradient(135deg, #e2e8f0, var(--accent-hover));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0f1117 0%, #1a1d27 50%, #1e1f3a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 48px 24px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 50% 60% at 20% 50%, rgba(99, 102, 241, .18) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .hero-inner {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .estado-tag {
+            display: inline-flex;
+            align-items: center;
+            background: var(--accent-dim);
+            border: 1px solid rgba(99, 102, 241, .4);
+            color: var(--accent-hover);
+            font-size: .8rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            padding: 3px 12px;
+            border-radius: 99px;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 800;
+            letter-spacing: -.02em;
+            margin-bottom: 24px;
+        }
+
+        .kpi-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .kpi {
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 24px;
+            min-width: 160px;
+        }
+
+        .kpi-label {
+            font-size: .75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            margin-bottom: 4px;
+        }
+
+        .kpi-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .kpi-value.green {
+            color: var(--green);
+        }
+
+        .main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 36px 24px 80px;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            background: var(--surface2);
+            padding: 12px 16px;
+            text-align: left;
+            font-size: .78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background .15s;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, .03);
+        }
+
+        td {
+            padding: 14px 16px;
+            font-size: .875rem;
+            vertical-align: top;
+        }
+
+        .td-empresa {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .td-objeto {
+            color: var(--muted);
+            max-width: 280px;
+        }
+
+        .td-valor {
+            color: var(--green);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .td-data {
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .td-num {
+            color: var(--muted);
+            font-size: .8rem;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--muted);
+        }
+
+        .empty h3 {
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="topbar">
+        <a class="back-link" href="{% url 'municipios:busca' %}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6" />
+            </svg>
+            Voltar à busca
+        </a>
+        <span class="topbar-brand">CivisScope</span>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-inner">
+            <div class="estado-tag">{{ municipio.estado }}</div>
+            <h1>{{ municipio.nome }}</h1>
+            <div class="kpi-row">
+                <div class="kpi">
+                    <div class="kpi-label">👥 População</div>
+                    <div class="kpi-value">{{ municipio.populacao|intcomma }}</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">📄 Contratos</div>
+                    <div class="kpi-value">{{ contratos|length }}</div>
+                </div>
+                {% if total_valor %}
+                <div class="kpi">
+                    <div class="kpi-label">💰 Total contratado</div>
+                    <div class="kpi-value green">R$ {{ total_valor|floatformat:2|intcomma }}</div>
+                </div>
+                {% endif %}
+                <div class="kpi">
+                    <div class="kpi-label">🔢 Código IBGE</div>
+                    <div class="kpi-value" style="font-size:1.2rem">{{ municipio.codigo_ibge }}</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="section-title">Contratos públicos</div>
+
+        {% if contratos %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Empresa</th>
+                        <th>Objeto</th>
+                        <th>Valor</th>
+                        <th>Assinatura</th>
+                        <th>Nº Processo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contratos %}
+                    <tr>
+                        <td class="td-empresa">{{ c.empresa.nome }}</td>
+                        <td class="td-objeto">{{ c.objeto|truncatewords:12 }}</td>
+                        <td class="td-valor">R$ {{ c.valor|floatformat:2|intcomma }}</td>
+                        <td class="td-data">{{ c.data_assinatura|date:"d/m/Y" }}</td>
+                        <td class="td-num">{{ c.numero_processo }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty">
+            <h3>Nenhum contrato cadastrado</h3>
+            <p>Este município ainda não possui contratos registrados no sistema.</p>
+        </div>
+        {% endif %}
+    </main>
+
+</body>
+
+</html>
