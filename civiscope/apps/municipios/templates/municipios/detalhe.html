@@ -5,12 +5,15 @@
 {% block title %}{{ municipio.nome }} — CivisScope{% endblock %}
 
 {% block meta %}
-<meta name="description" content="Detalhes de {{ municipio.nome }}: contratos, Câmara Municipal, vereadores e indicadores." />
+<meta name="description"
+  content="Detalhes de {{ municipio.nome }}: contratos, Câmara Municipal, vereadores e indicadores." />
 {% endblock %}
 
 {% block nav_back %}
-<a class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground" href="{% url 'municipios:busca' %}">
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+<a class="flex items-center gap-2 text-sm font-medium transition-colors hover:text-foreground"
+  style="color: var(--muted-foreground);" href="{% url 'municipios:busca' %}">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
     <path d="M15 18l-6-6 6-6" />
   </svg>
   Voltar à busca
@@ -18,114 +21,161 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<style>
-  .leaflet-popup-content-wrapper {
-    background: hsl(var(--card));
-    color: hsl(var(--card-foreground));
-    border-radius: var(--radius);
-  }
-
-  .leaflet-popup-tip {
-    background: hsl(var(--card));
-  }
-</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 {% endblock %}
 
 {% block content %}
-{% block content %}
 <div class="p-6 sm:p-10">
-  <header class="mb-8">
-    <div>
-      <span class="text-xs font-semibold glass px-2 py-1 rounded-full">{{ municipio.estado }}</span>
+
+  <!-- Hero Header -->
+  <header class="mb-8 animate-fade-in-up">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold"
+        style="background: rgba(88,166,255,0.12); color: var(--primary); border: 1px solid rgba(88,166,255,0.25);">{{
+        municipio.estado }}</span>
+      <span class="text-xs" style="color: var(--muted-foreground);">IBGE {{ municipio.codigo_ibge }}</span>
     </div>
-    <h1 class="text-3xl font-bold mt-2">{{ municipio.nome }}</h1>
-    <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-      <div class="glass rounded-lg p-4">
-        <div class="text-muted-foreground">👥 População</div>
-        <div class="text-2xl font-bold">{{ municipio.populacao|intcomma }}</div>
+    <h1 class="text-4xl font-extrabold gradient-text mb-6">{{ municipio.nome }}</h1>
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="stat-card stat-blue glass rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">👥</span>
+          <span class="text-xs font-medium" style="color: var(--muted-foreground);">População</span>
+        </div>
+        <div class="text-2xl font-extrabold" style="color: #60A5FA;">{{ municipio.populacao|intcomma }}</div>
       </div>
-      <div class="glass rounded-lg p-4">
-        <div class="text-muted-foreground">📄 Contratos</div>
-        <div class="text-2xl font-bold">{{ contratos|length }}</div>
+      <div class="stat-card stat-violet glass rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">📄</span>
+          <span class="text-xs font-medium" style="color: var(--muted-foreground);">Contratos</span>
+        </div>
+        <div class="text-2xl font-extrabold" style="color: #A78BFA;">{{ contratos|length }}</div>
       </div>
       {% if total_valor %}
-      <div class="glass rounded-lg p-4">
-        <div class="text-muted-foreground">💰 Total contratado</div>
-        <div class="text-2xl font-bold text-green-400">R$ {{ total_valor|floatformat:2|intcomma }}</div>
+      <div class="stat-card stat-green glass rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">💰</span>
+          <span class="text-xs font-medium" style="color: var(--muted-foreground);">Total contratado</span>
+        </div>
+        <div class="text-xl font-extrabold" style="color: #34D399;">R$ {{ total_valor|floatformat:2|intcomma }}</div>
       </div>
       {% endif %}
-      <div class="glass rounded-lg p-4">
-        <div class="text-muted-foreground">🔢 Código IBGE</div>
-        <div class="text-2xl font-bold">{{ municipio.codigo_ibge }}</div>
+      <div class="stat-card stat-slate glass rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">🏛️</span>
+          <span class="text-xs font-medium" style="color: var(--muted-foreground);">Vereadores eleitos</span>
+        </div>
+        <div class="text-2xl font-extrabold" style="color: #94A3B8;">{{ eleitos|length }}</div>
       </div>
     </div>
   </header>
 
-  <main>
-    <div class="border-b border-border">
-      <div class="tabs -mb-px flex space-x-8" role="tablist" aria-label="Seções da Câmara">
-        <button type="button" class="tab-btn active" role="tab" aria-selected="true" aria-controls="eleitos" id="tab-eleitos" data-tab="eleitos">Eleitos ({{ eleitos|length }})</button>
-        <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="nao-eleitos" id="tab-nao-eleitos" data-tab="nao-eleitos">Não Eleitos</button>
-        <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="grafo" id="tab-grafo" data-tab="grafo">🌐 Grafo</button>
-        <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="desempenho" id="tab-desempenho" data-tab="desempenho">📊 Desempenho</button>
-        <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="mapa" id="tab-mapa" data-tab="mapa">📍 Mapa</button>
-      </div>
+  <!-- Tabs -->
+  <div class="animate-fade-in-up delay-100">
+    <div class="flex items-center gap-2 flex-wrap mb-6 p-1 rounded-xl w-fit"
+      style="background: rgba(33,38,45,0.8); border: 1px solid var(--border);">
+      <button type="button" class="tab-btn active" role="tab" aria-selected="true" aria-controls="eleitos"
+        id="tab-eleitos" data-tab="eleitos">
+        🏆 Eleitos <span class="ml-1.5 text-xs opacity-70">({{ eleitos|length }})</span>
+      </button>
+      <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="nao-eleitos"
+        id="tab-nao-eleitos" data-tab="nao-eleitos">
+        Não Eleitos
+      </button>
+      <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="grafo" id="tab-grafo"
+        data-tab="grafo">
+        🌐 Grafo de Afinidade
+      </button>
+      <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="desempenho"
+        id="tab-desempenho" data-tab="desempenho">
+        📊 Desempenho
+      </button>
+      <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="mapa" id="tab-mapa"
+        data-tab="mapa">
+        📍 Mapa de Impacto
+      </button>
+      <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="contratos-tab"
+        id="tab-contratos" data-tab="contratos-tab">
+        📋 Contratos
+      </button>
     </div>
 
-    <div class="mt-8">
-      <div id="eleitos" class="tab-content active" role="tabpanel" aria-labelledby="tab-eleitos">
+    <!-- Tab Panels -->
+    <div class="tab-panels">
+
+      <!-- Eleitos -->
+      <div id="eleitos" class="tab-content" role="tabpanel" aria-labelledby="tab-eleitos">
         {% for partido, lista in eleitos_por_partido.items %}
         <div class="mb-8">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-8 h-8 flex items-center justify-center rounded-md glass font-bold text-xs">{{ partido|slice:":2" }}</div>
+            <div class="w-9 h-9 flex items-center justify-center rounded-lg font-bold text-xs"
+              style="background: rgba(88,166,255,0.15); color: var(--primary); border: 1px solid rgba(88,166,255,0.25);">
+              {{ partido|slice:":2" }}</div>
             <div>
-              <h3 class="font-semibold">{{ partido }}</h3>
-              <span class="text-sm text-muted-foreground">{{ lista|length }} vaga{{ lista|length|pluralize:"s" }}</span>
+              <h3 class="font-bold text-base">{{ partido }}</h3>
+              <span class="text-xs" style="color: var(--muted-foreground);">{{ lista|length }} vaga{{
+                lista|length|pluralize:"s" }}</span>
             </div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {% for v in lista %}
-            <div class="glass rounded-lg p-4">
-              <h4 class="font-bold">{{ v.nome_urna }}</h4>
-              <div class="mt-2 flex gap-2">
-                <span class="text-xs font-semibold glass px-2 py-1 rounded-full">{{ v.partido_sigla }}</span>
+            <div class="glass rounded-xl p-4" style="border-left: 3px solid rgba(88,166,255,0.4);">
+              <div class="flex items-start justify-between mb-3">
+                <h4 class="font-bold text-sm leading-tight">{{ v.nome_urna }}</h4>
                 {% if v.is_reeleito %}
-                <span class="text-xs font-semibold bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full">Reeleito</span>
+                <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 ml-2"
+                  style="background: rgba(59,130,246,0.15); color: #60A5FA; border: 1px solid rgba(59,130,246,0.3);">↩
+                  Reeleito</span>
                 {% endif %}
               </div>
-              <div class="text-sm text-muted-foreground mt-3">{{ v.status_eleicao }}</div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-md"
+                  style="background: rgba(88,166,255,0.1); color: var(--primary);">{{ v.partido_sigla }}</span>
+                <span class="text-xs" style="color: var(--muted-foreground);">{{ v.status_eleicao }}</span>
+              </div>
             </div>
             {% endfor %}
           </div>
         </div>
         {% empty %}
-        <div class="text-center py-16 glass rounded-lg">
-          <p>Nenhum vereador eleito sincronizado.</p>
+        <div class="text-center py-16 glass rounded-xl">
+          <p class="text-lg mb-1">🗳️</p>
+          <p style="color: var(--muted-foreground);">Nenhum vereador eleito sincronizado ainda.</p>
         </div>
         {% endfor %}
       </div>
 
+      <!-- Não Eleitos -->
       <div id="nao-eleitos" class="tab-content" role="tabpanel" aria-labelledby="tab-nao-eleitos" hidden>
-        <div class="overflow-x-auto glass rounded-lg">
-          <table class="min-w-full divide-y divide-border">
-            <thead class="glass">
-              <tr>
-                <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Candidato</th>
-                <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Partido</th>
-                <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+        <div class="overflow-x-auto glass rounded-xl">
+          <table class="min-w-full divide-y" style="border-color: var(--border);">
+            <thead>
+              <tr style="background: rgba(33,38,45,0.6);">
+                <th class="py-3 px-5 text-left text-xs font-semibold uppercase tracking-wider"
+                  style="color: var(--muted-foreground);">Candidato</th>
+                <th class="py-3 px-5 text-left text-xs font-semibold uppercase tracking-wider"
+                  style="color: var(--muted-foreground);">Partido</th>
+                <th class="py-3 px-5 text-left text-xs font-semibold uppercase tracking-wider"
+                  style="color: var(--muted-foreground);">Status</th>
               </tr>
             </thead>
-            <tbody class="glass divide-y divide-border">
+            <tbody class="divide-y" style="border-color: var(--border);">
               {% for v in nao_eleitos %}
-              <tr>
-                <td class="py-4 px-4 whitespace-nowrap">{{ v.nome_urna }}</td>
-                <td class="py-4 px-4 whitespace-nowrap"><span class="text-xs font-semibold glass px-2 py-1 rounded-full">{{ v.partido_sigla }}</span></td>
-                <td class="py-4 px-4 whitespace-nowrap">{{ v.status_eleicao }}</td>
+              <tr class="hover:bg-accent/30 transition-colors">
+                <td class="py-3.5 px-5 text-sm font-medium">{{ v.nome_urna }}</td>
+                <td class="py-3.5 px-5">
+                  <span class="text-xs font-bold px-2 py-0.5 rounded"
+                    style="background: rgba(88,166,255,0.1); color: var(--primary);">{{ v.partido_sigla }}</span>
+                </td>
+                <td class="py-3.5 px-5 text-sm" style="color: var(--muted-foreground);">{{ v.status_eleicao }}</td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="3" class="py-8 text-center text-muted-foreground">Nenhum candidato extra.</td>
+                <td colspan="3" class="py-12 text-center text-sm" style="color: var(--muted-foreground);">Nenhum
+                  candidato extra.</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -133,76 +183,95 @@
         </div>
       </div>
 
+      <!-- Grafo -->
       <div id="grafo" class="tab-content" role="tabpanel" aria-labelledby="tab-grafo" hidden>
-        <div class="flex flex-col lg:flex-row gap-6">
-          <div id="graph-container" class="flex-1 h-96 lg:h-auto glass rounded-lg"></div>
-          <div id="graph-sidebar" class="w-full lg:w-80 glass rounded-lg p-4">
-            <div class="graph-sidebar-empty text-center text-muted-foreground">
-              <span class="text-3xl">👆</span>
-              <p>Clique em um vereador para ver seus projetos e conexões.</p>
+        <div class="flex flex-col lg:flex-row gap-5">
+          <div id="graph-container" class="flex-1 h-96 lg:h-[500px] glass rounded-xl"></div>
+          <div id="graph-sidebar" class="w-full lg:w-80 glass rounded-xl p-5">
+            <div class="graph-sidebar-empty text-center py-8" style="color: var(--muted-foreground);">
+              <span class="text-4xl block mb-3">👆</span>
+              <p class="text-sm">Clique em um vereador para ver seus projetos e conexões.</p>
             </div>
           </div>
         </div>
-        <p class="text-sm text-muted-foreground mt-4">* O grafo agrupa vereadores por afinidade partidária e coligação.</p>
+        <p class="text-xs mt-4" style="color: var(--muted-foreground);">* O grafo agrupa vereadores por afinidade de
+          voto e coligação.</p>
       </div>
 
+      <!-- Desempenho -->
       <div id="desempenho" class="tab-content" role="tabpanel" aria-labelledby="tab-desempenho" hidden>
-        <div class="glass rounded-lg p-6 h-96">
+        <div class="glass rounded-xl p-6 h-96">
           <canvas id="efficiencyChart" aria-label="Gráfico de eficiência legislativa"></canvas>
         </div>
-        <p class="text-sm text-muted-foreground mt-4">* Exibe o total de projetos apresentados vs. projetos aprovados por cada vereador eleito.</p>
+        <p class="text-xs mt-4" style="color: var(--muted-foreground);">* Projetos apresentados vs. aprovados por
+          vereador eleito.</p>
       </div>
 
+      <!-- Mapa -->
       <div id="mapa" class="tab-content" role="tabpanel" aria-labelledby="tab-mapa" hidden>
-        <div id="impact-map" class="h-96 w-full rounded-lg border border-border"></div>
+        <div id="impact-map" class="h-[480px] w-full rounded-xl" style="border: 1px solid var(--border);"></div>
         <div class="mt-4 flex gap-6 text-sm">
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                <span>Projetos de Lei</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
-                <span>Contratos Públicos</span>
-            </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full" style="background: #3b82f6;"></span>
+            <span style="color: var(--muted-foreground);">Projetos de Lei</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full" style="background: #facc15;"></span>
+            <span style="color: var(--muted-foreground);">Contratos Públicos</span>
+          </div>
         </div>
-        <p class="text-sm text-muted-foreground mt-4">* O mapa projeta o impacto geográfico de ações legislativas e gastos públicos.</p>
+        <p class="text-xs mt-3" style="color: var(--muted-foreground);">* O mapa projeta impacto geográfico de ações
+          legislativas e gastos públicos.</p>
       </div>
-    </div>
 
-    <div class="mt-12">
-      <h2 class="text-2xl font-bold mb-4">Contratos Públicos</h2>
-      {% if contratos %}
-      <div class="overflow-x-auto glass rounded-lg">
-        <table class="min-w-full divide-y divide-border">
-          <thead class="glass">
-            <tr>
-              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Empresa</th>
-              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Objeto</th>
-              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Valor</th>
-              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Assinatura</th>
-              <th class="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nº Processo</th>
-            </tr>
-          </thead>
-          <tbody class="glass divide-y divide-border">
-            {% for c in contratos %}
-            <tr>
-              <td class="py-4 px-4 whitespace-nowrap font-medium">{{ c.empresa.nome }}</td>
-              <td class="py-4 px-4 text-muted-foreground max-w-sm truncate">{{ c.objeto }}</td>
-              <td class="py-4 px-4 whitespace-nowrap text-green-400 font-semibold">R$ {{ c.valor|floatformat:2|intcomma }}</td>
-              <td class="py-4 px-4 whitespace-nowrap text-muted-foreground">{{ c.data_assinatura|date:"d/m/Y" }}</td>
-              <td class="py-4 px-4 whitespace-nowrap text-muted-foreground">{{ c.numero_processo }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <!-- Contratos -->
+      <div id="contratos-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-contratos" hidden>
+        {% if contratos %}
+        <div class="overflow-x-auto glass rounded-xl">
+          <table class="min-w-full divide-y" style="border-color: var(--border);">
+            <thead>
+              <tr style="background: rgba(33,38,45,0.6);">
+                <th class="py-3 px-5 text-left text-xs font-semibold uppercase tracking-wider"
+                  style="color: var(--muted-foreground);">Empresa</th>
+                <th class="py-3 px-5 text-left text-xs font-semibold uppercase tracking-wider"
+                  style="color: var(--muted-foreground);">Objeto</th>
+                <th class="py-3 px-5 text-left text-xs font-semibold uppercase tracking-wider"
+                  style="color: var(--muted-foreground);">Valor</th>
+                <th class="py-3 px-5 text-left text-xs font-semibold uppercase tracking-wider"
+                  style="color: var(--muted-foreground);">Assinatura</th>
+                <th class="py-3 px-5 text-left text-xs font-semibold uppercase tracking-wider"
+                  style="color: var(--muted-foreground);">Nº Processo</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y" style="border-color: var(--border);">
+              {% for c in contratos %}
+              <tr class="hover:bg-accent/30 transition-colors">
+                <td class="py-3.5 px-5 text-sm font-semibold whitespace-nowrap">{{ c.empresa.nome }}</td>
+                <td class="py-3.5 px-5 text-sm max-w-xs truncate" style="color: var(--muted-foreground);">{{ c.objeto }}
+                </td>
+                <td class="py-3.5 px-5 text-sm font-bold whitespace-nowrap" style="color: #34D399;">R$ {{
+                  c.valor|floatformat:2|intcomma }}</td>
+                <td class="py-3.5 px-5 text-sm whitespace-nowrap" style="color: var(--muted-foreground);">{{
+                  c.data_assinatura|date:"d/m/Y" }}</td>
+                <td class="py-3.5 px-5 text-xs whitespace-nowrap" style="color: var(--muted-foreground);">{{
+                  c.numero_processo }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-16 glass rounded-xl">
+          <p class="text-2xl mb-3">📭</p>
+          <h3 class="font-semibold mb-1">Nenhum contrato cadastrado</h3>
+          <p class="text-sm" style="color: var(--muted-foreground);">Sincronize via PNCP para importar contratos.</p>
+        </div>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="text-center py-16 glass rounded-lg">
-        <h3>Nenhum contrato cadastrado</h3>
-      </div>
-      {% endif %}
-    </div>
-  </main>
+
+    </div><!-- /tab-panels -->
+  </div>
+
 </div>
 {% endblock %}
 
@@ -210,253 +279,218 @@
 {{ grafo_links|json_script:"grafo-links-data" }}
 {{ performance_data|json_script:"performance-data" }}
 {{ map_points|json_script:"map-points-data" }}
-{% endblock %}
-
 
 {% block extra_js %}
 <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
-(function() {
-  let chartsInitialized = { performance: false, map: false, graph: false };
-  let mapInstance = null;
-  const GeoUtils = (function() {
-    let neighborhoodData = null;
-    const centroidCache = new Map();
-    async function loadGeoJSON(url) {
-      if (neighborhoodData) return neighborhoodData;
-      try {
-        const response = await fetch(url);
-        neighborhoodData = await response.json();
-        return neighborhoodData;
-      } catch (err) {
-        console.error('Error loading GeoJSON:', err);
+  (function () {
+    let chartsInitialized = { performance: false, map: false, graph: false };
+    let mapInstance = null;
+
+    const GeoUtils = (function () {
+      let neighborhoodData = null;
+      const centroidCache = new Map();
+      async function loadGeoJSON(url) {
+        if (neighborhoodData) return neighborhoodData;
+        try {
+          const response = await fetch(url);
+          neighborhoodData = await response.json();
+          return neighborhoodData;
+        } catch (err) { return null; }
+      }
+      function getBairroCentroide(nomeBairro) {
+        if (!neighborhoodData || !nomeBairro) return null;
+        if (centroidCache.has(nomeBairro)) return centroidCache.get(nomeBairro);
+        const feature = neighborhoodData.features.find(f => f.properties && f.properties.name && f.properties.name.toLowerCase() === nomeBairro.toLowerCase());
+        if (feature) {
+          try {
+            const centroid = turf.centroid(feature);
+            const coords = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
+            centroidCache.set(nomeBairro, coords);
+            return coords;
+          } catch (e) { return null; }
+        }
         return null;
       }
-    }
-    function getBairroCentroide(nomeBairro) {
-      if (!neighborhoodData || !nomeBairro) return null;
-      if (centroidCache.has(nomeBairro)) return centroidCache.get(nomeBairro);
-      const feature = neighborhoodData.features.find(f => f.properties && f.properties.name && f.properties.name.toLowerCase() === nomeBairro.toLowerCase());
-      if (feature) {
-        try {
-          const centroid = turf.centroid(feature);
-          const coords = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
-          centroidCache.set(nomeBairro, coords);
-          return coords;
-        } catch (e) { return null; }
-      }
-      return null;
-    }
-    return { loadGeoJSON, getBairroCentroide };
-  })();
-  window.getBairroCentroide = GeoUtils.getBairroCentroide;
+      return { loadGeoJSON, getBairroCentroide };
+    })();
+    window.getBairroCentroide = GeoUtils.getBairroCentroide;
 
-  function showTab(id) {
-    document.querySelectorAll('.tab-content').forEach(c => {
-      c.style.display = 'none';
+    // ======= TAB LOGIC =======
+    function showTab(id) {
+      document.querySelectorAll('.tab-content').forEach(c => { c.style.display = 'none'; });
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      const panel = document.getElementById(id);
+      const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+      if (panel) panel.style.display = 'block';
+      if (btn) { btn.classList.add('active'); btn.setAttribute('aria-selected', 'true'); }
+      if (id === 'grafo' && !chartsInitialized.graph) renderGraph();
+      if (id === 'desempenho' && !chartsInitialized.performance) renderPerformanceChart();
+      if (id === 'mapa' && !chartsInitialized.map) renderMap();
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', function () { showTab(this.getAttribute('data-tab')); });
     });
-    document.querySelectorAll('.tab-btn').forEach(b => {
-      b.classList.remove('active', 'border-primary', 'text-primary');
-      b.classList.add('border-transparent', 'text-muted-foreground');
-      b.setAttribute('aria-selected', 'false');
-    });
-    const panel = document.getElementById(id);
-    const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
-    if (panel) panel.style.display = 'block';
-    if (btn) {
-      btn.classList.add('active', 'border-primary', 'text-primary');
-      btn.classList.remove('border-transparent', 'text-muted-foreground');
-      btn.setAttribute('aria-selected', 'true');
-    }
-    if (id === 'grafo' && !chartsInitialized.graph) renderGraph();
-    if (id === 'desempenho' && !chartsInitialized.performance) renderPerformanceChart();
-    if (id === 'mapa' && !chartsInitialized.map) renderMap();
-  }
 
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', function() { showTab(this.getAttribute('data-tab')) });
-  });
+    // Init tabs
+    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+    const firstActive = document.querySelector('.tab-content');
+    if (firstActive) firstActive.style.display = 'block';
 
-  // Initial tab setup
-  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-  document.querySelector('.tab-content.active').style.display = 'block';
-  document.querySelectorAll('.tab-btn').forEach(b => {
-      b.classList.add('border-b-2', 'py-4', 'px-1', 'text-sm', 'font-medium');
-      if(b.classList.contains('active')) {
-          b.classList.add('border-primary', 'text-primary');
-          b.classList.remove('border-transparent', 'text-muted-foreground');
-      } else {
-          b.classList.add('border-transparent', 'text-muted-foreground', 'hover:border-border', 'hover:text-foreground');
-      }
-  });
-
-
-  function renderPerformanceChart() {
-    const dataEl = document.getElementById('performance-data');
-    if (!dataEl) return;
-    const data = JSON.parse(dataEl.textContent);
-    const ctx = document.getElementById('efficiencyChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: data.map(d => d.id),
-        datasets: [
-          { label: 'Projetos Aprovados', data: data.map(d => d.aprovados), backgroundColor: 'hsl(var(--primary))', borderRadius: 4 },
-          { label: 'Total de Projetos', data: data.map(d => d.total), backgroundColor: 'hsl(var(--secondary))', borderRadius: 4 }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: 'hsl(var(--muted-foreground))' } } },
-        scales: {
-          x: { ticks: { color: 'hsl(var(--muted-foreground))' }, grid: { display: false } },
-          y: { ticks: { color: 'hsl(var(--muted-foreground))' }, grid: { color: 'hsl(var(--border))' } }
+    // ======= PERFORMANCE CHART =======
+    function renderPerformanceChart() {
+      const dataEl = document.getElementById('performance-data');
+      if (!dataEl) return;
+      const data = JSON.parse(dataEl.textContent);
+      const ctx = document.getElementById('efficiencyChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.id),
+          datasets: [
+            { label: 'Projetos Aprovados', data: data.map(d => d.aprovados), backgroundColor: 'rgba(88, 166, 255, 0.8)', borderRadius: 6 },
+            { label: 'Total de Projetos', data: data.map(d => d.total), backgroundColor: 'rgba(48, 54, 61, 0.8)', borderRadius: 6 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#8B949E', font: { family: 'Inter' } } } },
+          scales: {
+            x: { ticks: { color: '#8B949E' }, grid: { display: false } },
+            y: { ticks: { color: '#8B949E' }, grid: { color: 'rgba(48,54,61,0.6)' } }
+          }
         }
-      }
-    });
-    chartsInitialized.performance = true;
-  }
+      });
+      chartsInitialized.performance = true;
+    }
 
-  function renderGraph() {
-    const container = d3.select('#graph-container');
-    if(container.select('svg').node()) return; // Already rendered
-    const width = container.node().getBoundingClientRect().width;
-    const height = 400;
-    const nodesData = JSON.parse(document.getElementById('grafo-nodes-data').textContent);
-    const links = JSON.parse(document.getElementById('grafo-links-data').textContent);
-    const nodes = nodesData.map(d => ({ ...d, size: d.reeleito ? 16 : 10 }));
-    
-    const svg = container.append('svg').attr('width', '100%').attr('height', height).attr('viewBox', [0, 0, width, height]);
-    
-    const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(100).strength(0.5))
-      .force('charge', d3.forceManyBody().strength(-150))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(d => d.size + 20));
+    // ======= GRAPH =======
+    function renderGraph() {
+      const container = d3.select('#graph-container');
+      if (container.select('svg').node()) return;
+      const width = container.node().getBoundingClientRect().width;
+      const height = 500;
+      const nodesData = JSON.parse(document.getElementById('grafo-nodes-data').textContent);
+      const links = JSON.parse(document.getElementById('grafo-links-data').textContent);
+      const nodes = nodesData.map(d => ({ ...d, size: d.reeleito ? 16 : 10 }));
 
-    const link = svg.append('g').attr('stroke', 'hsl(var(--border))').attr('stroke-opacity', 0.6)
-      .selectAll('line').data(links).join('line');
+      const svg = container.append('svg').attr('width', '100%').attr('height', height).attr('viewBox', [0, 0, width, height]);
+      const simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(100).strength(0.5))
+        .force('charge', d3.forceManyBody().strength(-150))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(d => d.size + 20));
 
-    const partyColors = d3.scaleOrdinal(d3.schemeCategory10);
-    const node = svg.append('g').selectAll('g').data(nodes).join('g')
-      .attr('cursor', 'pointer')
-      .on('click', (event, d) => showDetails(d))
-      .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+      const link = svg.append('g').attr('stroke', 'rgba(48,54,61,0.8)').attr('stroke-opacity', 0.6)
+        .selectAll('line').data(links).join('line');
 
-    node.append('circle')
-      .attr('r', d => d.size)
-      .attr('fill', d => partyColors(d.group))
-      .attr('stroke', 'hsl(var(--background))')
-      .attr('stroke-width', 2);
-    
-    node.append('text')
-      .attr('x', d => d.size + 4)
-      .attr('y', '0.31em')
-      .attr('font-size', '10px')
-      .attr('fill', 'hsl(var(--foreground))')
-      .text(d => d.id);
+      const partyColors = d3.scaleOrdinal(d3.schemeTableau10);
+      const node = svg.append('g').selectAll('g').data(nodes).join('g')
+        .attr('cursor', 'pointer')
+        .on('click', (event, d) => showDetails(d))
+        .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
 
-    simulation.on('tick', () => {
-      link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      node.append('circle')
+        .attr('r', d => d.size)
+        .attr('fill', d => partyColors(d.group))
+        .attr('stroke', 'rgba(13,17,23,0.8)')
+        .attr('stroke-width', 2.5);
+
+      node.append('text')
+        .attr('x', d => d.size + 5)
+        .attr('y', '0.35em')
+        .attr('font-size', '10px')
+        .attr('font-family', 'Inter, sans-serif')
+        .attr('fill', '#C9D1D9')
+        .text(d => d.id);
+
+      simulation.on('tick', () => {
+        link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
           .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
-      node.attr('transform', d => `translate(${d.x},${d.y})`);
-    });
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+      });
 
-    function showDetails(d) {
+      function showDetails(d) {
         const sidebar = document.getElementById('graph-sidebar');
         sidebar.innerHTML = `
-            <div class="flex items-center gap-4 mb-4">
-                <img src="${d.foto_url}" alt="" class="w-16 h-16 rounded-full border-2" style="border-color: ${partyColors(d.group)}">
-                <div>
-                    <h4 class="font-bold">${d.id}</h4>
-                    <span class="text-xs font-semibold px-2 py-1 rounded-full" style="background-color: ${partyColors(d.group)}33; color: ${partyColors(d.group)}">${d.group}</span>
-                </div>
+        <div class="flex items-center gap-4 mb-5">
+          <img src="${d.foto_url}" alt="" class="w-14 h-14 rounded-full object-cover" style="border: 2px solid ${partyColors(d.group)}">
+          <div>
+            <h4 class="font-bold text-sm">${d.id}</h4>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-md inline-block mt-1" style="background:${partyColors(d.group)}22; color:${partyColors(d.group)}">${d.group}</span>
+          </div>
+        </div>
+        <div class="text-sm space-y-4">
+          <div>
+            <div class="flex justify-between text-xs mb-1.5" style="color:var(--muted-foreground)">
+              <span>Eficiência legislativa</span><span style="color:var(--primary)">${d.eficiencia}%</span>
             </div>
-            <div class="text-sm">
-                <div class="mb-3">
-                    <small class="text-muted-foreground">Eficiência</small>
-                    <div class="w-full bg-secondary rounded-full h-2.5">
-                        <div class="bg-primary h-2.5 rounded-full" style="width: ${d.eficiencia}%"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>${d.aprovados}/${d.total} aprovados</span>
-                        <span>${d.eficiencia}%</span>
-                    </div>
-                </div>
-                <h5 class="font-semibold text-xs text-muted-foreground uppercase tracking-wider mt-4 mb-2">Projetos em Destaque</h5>
-                <ul class="space-y-2">
-                    ${d.projetos.map(p => `<li class="p-2 bg-secondary rounded-md text-xs">${p}</li>`).join('') || '<li class="text-xs text-muted-foreground">Nenhum projeto.</li>'}
-                </ul>
+            <div class="w-full rounded-full h-2" style="background:rgba(33,38,45,0.9)">
+              <div class="h-2 rounded-full" style="width:${d.eficiencia}%;background:var(--primary)"></div>
             </div>
-        `;
-    }
-
-    function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-    }
-    function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-    }
-    function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
-    }
-    chartsInitialized.graph = true;
-  }
-
-  async function renderMap() {
-    const dataEl = document.getElementById('map-points-data');
-    if (!dataEl || mapInstance) return;
-    const data = JSON.parse(dataEl.textContent);
-    if (!data || data.length === 0) return;
-    
-    await GeoUtils.loadGeoJSON("{% static 'municipios/data/bairros_colatina.json' %}");
-    const fallbackCenter = [-19.5350, -40.6270];
-    
-    mapInstance = L.map('impact-map').setView(fallbackCenter, 13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(mapInstance);
-
-    const projectColor = '#3b82f6', contractColor = '#facc15';
-
-    data.forEach(p => {
-      const isProject = p.tipo === 'projeto';
-      const color = isProject ? projectColor : contractColor;
-      const centroide = GeoUtils.getBairroCentroide(p.bairro);
-      let [lat, lng] = centroide || [p.lat || fallbackCenter[0], p.lng || fallbackCenter[1]];
-      lat += (Math.random() - 0.5) * 0.004;
-      lng += (Math.random() - 0.5) * 0.004;
-      
-      const marker = L.circleMarker([lat, lng], {
-          radius: 6,
-          fillColor: color,
-          color: "white",
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 0.8
-      }).addTo(mapInstance);
-
-      const popupContent = `
-        <div class="min-w-[200px] p-1">
-            <h4 class="font-bold mb-2">${p.titulo}</h4>
-            <div class="text-xs text-muted-foreground space-y-1">
-                <p><strong>Bairro:</strong> ${p.bairro}</p>
-                ${p.autor ? `<p><strong>Autor:</strong> ${p.autor}</p>`: ''}
-                ${p.valor ? `<p><strong>Valor:</strong> <span class="font-semibold text-green-400">R$ ${p.valor.toLocaleString('pt-BR')}</span></p>` : ''}
-            </div>
+            <p class="text-xs mt-1.5" style="color:var(--muted-foreground)">${d.aprovados}/${d.total} projetos aprovados</p>
+          </div>
+          <div>
+            <h5 class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color:var(--muted-foreground)">Projetos em Destaque</h5>
+            <ul class="space-y-2">
+              ${d.projetos.map(p => `<li class="text-xs p-2 rounded-lg" style="background:rgba(33,38,45,0.8)">${p}</li>`).join('') || '<li class="text-xs" style="color:var(--muted-foreground)">Nenhum projeto.</li>'}
+            </ul>
+          </div>
         </div>`;
-      marker.bindPopup(popupContent);
-    });
-    chartsInitialized.map = true;
-    setTimeout(() => mapInstance && mapInstance.invalidateSize(), 200);
-  }
-})();
+      }
+
+      function dragstarted(event) { if (!event.active) simulation.alphaTarget(0.3).restart(); event.subject.fx = event.subject.x; event.subject.fy = event.subject.y; }
+      function dragged(event) { event.subject.fx = event.x; event.subject.fy = event.y; }
+      function dragended(event) { if (!event.active) simulation.alphaTarget(0); event.subject.fx = null; event.subject.fy = null; }
+      chartsInitialized.graph = true;
+    }
+
+    // ======= MAP =======
+    async function renderMap() {
+      const dataEl = document.getElementById('map-points-data');
+      if (!dataEl || mapInstance) return;
+      const data = JSON.parse(dataEl.textContent);
+      if (!data || data.length === 0) return;
+
+      await GeoUtils.loadGeoJSON("{% static 'municipios/data/bairros_colatina.json' %}");
+      const fallbackCenter = [-19.5350, -40.6270];
+
+      mapInstance = L.map('impact-map').setView(fallbackCenter, 13);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(mapInstance);
+
+      data.forEach(p => {
+        const isProject = p.tipo === 'projeto';
+        const color = isProject ? '#3b82f6' : '#facc15';
+        const centroide = GeoUtils.getBairroCentroide(p.bairro);
+        let [lat, lng] = centroide || [p.lat || fallbackCenter[0], p.lng || fallbackCenter[1]];
+        lat += (Math.random() - 0.5) * 0.004;
+        lng += (Math.random() - 0.5) * 0.004;
+
+        const marker = L.circleMarker([lat, lng], {
+          radius: 7, fillColor: color, color: 'rgba(13,17,23,0.7)', weight: 2, opacity: 1, fillOpacity: 0.85
+        }).addTo(mapInstance);
+
+        marker.bindPopup(`
+        <div style="min-width:200px;padding:4px">
+          <h4 style="font-weight:bold;margin-bottom:6px;font-size:13px">${p.titulo}</h4>
+          <div style="font-size:11px;opacity:0.75;line-height:1.6">
+            <p><strong>Bairro:</strong> ${p.bairro}</p>
+            ${p.autor ? `<p><strong>Autor:</strong> ${p.autor}</p>` : ''}
+            ${p.valor ? `<p><strong>Valor:</strong> <span style="color:#34D399;font-weight:600">R$ ${p.valor.toLocaleString('pt-BR')}</span></p>` : ''}
+          </div>
+        </div>`);
+      });
+      chartsInitialized.map = true;
+      setTimeout(() => mapInstance && mapInstance.invalidateSize(), 200);
+    }
+  })();
 </script>
 {% endblock %}

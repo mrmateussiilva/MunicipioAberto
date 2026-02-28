@@ -5,7 +5,7 @@
 :root {
   --background: #0D1117;
   --foreground: #C9D1D9;
-  --card: rgba(33, 38, 45, 0.8);
+  --card: rgba(22, 27, 34, 0.85);
   --card-foreground: #C9D1D9;
   --popover: #161B22;
   --popover-foreground: #C9D1D9;
@@ -19,7 +19,7 @@
   --accent-foreground: #C9D1D9;
   --destructive: #DA3633;
   --destructive-foreground: #C9D1D9;
-  --border: #30363D;
+  --border: rgba(48, 54, 61, 0.8);
   --input: #21262D;
   --ring: #58A6FF;
   --radius: 0.5rem;
@@ -28,33 +28,219 @@
 body {
   @apply bg-background text-foreground;
   font-family: 'Inter', sans-serif;
-  background-image: radial-gradient(at 80% 0%, hsla(212,40%,50%,0.3) 0px, transparent 50%),
-                    radial-gradient(at 0% 50%, hsla(283,40%,50%,0.3) 0px, transparent 50%);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse at 80% 0%, hsla(212, 60%, 40%, 0.2) 0px, transparent 55%),
+    radial-gradient(ellipse at 0% 60%, hsla(270, 50%, 40%, 0.15) 0px, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, hsla(200, 60%, 30%, 0.12) 0px, transparent 50%);
 }
 
+/* ===================== GLASS ===================== */
 .glass {
   background-color: var(--card);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
 }
 
+/* ===================== SIDEBAR ===================== */
+.sidebar-logo-icon {
+  filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.5));
+}
+
+.sidebar-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  border-left: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.sidebar-nav-link:hover {
+  color: var(--foreground);
+  background-color: rgba(88, 166, 255, 0.07);
+  border-left-color: rgba(88, 166, 255, 0.4);
+}
+
+.sidebar-nav-link.active {
+  color: var(--primary);
+  background-color: rgba(88, 166, 255, 0.1);
+  border-left-color: var(--primary);
+  font-weight: 500;
+}
+
+/* ===================== SEARCH INPUT ===================== */
 .search-actions select {
-    background-color: hsl(var(--secondary));
+  background-color: var(--secondary);
+  color: var(--foreground);
+  border: 1px solid var(--border);
 }
 
-#graph-container svg {
-    cursor: grab;
+.search-input-wrapper:focus-within .search-input-icon {
+  color: var(--primary);
 }
 
-#graph-container svg:active {
-    cursor: grabbing;
+.search-bar-input {
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.search-bar-input:focus {
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2), 0 0 20px rgba(88, 166, 255, 0.08);
+  border-color: rgba(88, 166, 255, 0.6);
+  outline: none;
+}
+
+/* ===================== FEATURE CARDS ===================== */
+.feature-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  border: 1px solid var(--border);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  border-color: rgba(88, 166, 255, 0.35);
+}
+
+.feature-card:hover .card-arrow {
+  transform: translateX(4px);
+  opacity: 1;
+}
+
+.card-arrow {
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.icon-box-blue   { background: rgba(59, 130, 246, 0.15); color: #60A5FA; box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
+.icon-box-green  { background: rgba(16, 185, 129, 0.15); color: #34D399; box-shadow: 0 0 20px rgba(16, 185, 129, 0.15); }
+.icon-box-purple { background: rgba(139, 92, 246, 0.15); color: #A78BFA; box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
+
+/* ===================== RESULT CARDS ===================== */
+.result-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.result-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border-color: rgba(88, 166, 255, 0.3);
+}
+
+/* ===================== TABS ===================== */
+.tab-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  border: 1px solid transparent;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  color: var(--foreground);
+  background-color: var(--secondary);
 }
 
 .tab-btn.active {
-    border-color: var(--primary);
+  color: var(--primary);
+  background-color: rgba(88, 166, 255, 0.12);
+  border-color: rgba(88, 166, 255, 0.4);
 }
 
-#impact-map {
-    background-color: var(--background);
+/* ===================== STAT CARDS ===================== */
+.stat-card {
+  border-left: 3px solid var(--border);
+  transition: border-color 0.2s;
 }
+.stat-card.stat-blue   { border-left-color: #3B82F6; }
+.stat-card.stat-violet { border-left-color: #8B5CF6; }
+.stat-card.stat-green  { border-left-color: #10B981; }
+.stat-card.stat-slate  { border-left-color: #64748B; }
+
+/* ===================== GRADIENT TEXT ===================== */
+.gradient-text {
+  background: linear-gradient(135deg, #58A6FF 0%, #79c0ff 50%, #a5d6ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-gradient {
+  background: linear-gradient(135deg, #58A6FF, #38BDF8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===================== ANIMATIONS ===================== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.45s ease forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* Staggered delay helpers */
+.delay-100 { animation-delay: 0.10s; }
+.delay-200 { animation-delay: 0.20s; }
+.delay-300 { animation-delay: 0.30s; }
+
+/* ===================== GRAPH ===================== */
+#graph-container svg { cursor: grab; }
+#graph-container svg:active { cursor: grabbing; }
+
+/* ===================== MAP ===================== */
+#impact-map { background-color: var(--background); }
+
+.leaflet-popup-content-wrapper {
+  background: var(--popover) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border);
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--popover) !important;
+}
+
+/* ===================== HERO MESH BACKGROUND ===================== */
+.hero-mesh {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-mesh::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(88, 166, 255, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* ===================== SCROLLBAR ===================== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--background); }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
