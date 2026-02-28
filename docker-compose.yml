@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: civiscope-postgres
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      POSTGRES_DB: ${DB_NAME:-civiscope}
+      POSTGRES_USER: ${DB_USER:-civiscope}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-civiscope}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-civiscope} -d ${DB_NAME:-civiscope}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    container_name: civiscope-app
+    build:
+      context: .
+      network: host
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-civiscope.settings.dev}
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    working_dir: /app/civiscope
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  postgres_data:

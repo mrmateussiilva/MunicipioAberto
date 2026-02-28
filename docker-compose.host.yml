@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: civiscope-postgres-host
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      POSTGRES_DB: ${DB_NAME:-civiscope}
+      POSTGRES_USER: ${DB_USER:-civiscope}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-civiscope}
+    volumes:
+      - postgres_data_host:/var/lib/postgresql/data
+
+  app:
+    container_name: civiscope-app-host
+    build:
+      context: .
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-civiscope.settings.dev}
+    volumes:
+      - .:/app
+    working_dir: /app/civiscope
+    depends_on:
+      - postgres
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 127.0.0.1:8000"
+
+volumes:
+  postgres_data_host:
